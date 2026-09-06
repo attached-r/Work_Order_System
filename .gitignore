@@ -1,0 +1,104 @@
+# ============ Java / Spring Boot ============
+target/
+!.mvn/wrapper/maven-wrapper.jar
+**/*.class
+**/*.jar
+**/*.war
+**/*.nar
+**/*.ear
+**/*.zip
+**/*.tar.gz
+**/*.rar
+hs_err_pid*
+replay_pid*
+
+# Maven
+**/build/
+**/target/
+**/dependency-reduced-pom.xml
+
+# Gradle
+.gradle/
+**/build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# IDE - IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+.apt_generated/
+.classpath
+.project
+.settings/
+.factorypath
+.vscode/
+
+# ============ Python / FastAPI ============
+**/__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+.venv/
+venv/
+env/
+*.whl
+*.manifest
+*.spec
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.coverage
+htmlcov/
+.coverage.*
+*.log
+.tox/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.ruff_cache/
+*/.ipynb_checkpoints/
+
+# ============ Vue / Node.js ============
+node_modules/
+**/node_modules/
+**/dist/
+**/dist-ssr/
+**/*.local
+**/.vite/
+**/.cache/
+**/stats.html
+
+# Vue build output
+**/dist/
+**/dist-ssr/
+
+# ============ OS ============
+*.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.DS_Store?
+
+# ============ IDE / Editor ============
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ============ Environment ============
+.env
+.env.local
+.env.*.local
+*.pem
+
+# ============ Logs ============
+*.log
+logs/

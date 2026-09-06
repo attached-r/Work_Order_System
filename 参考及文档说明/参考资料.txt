@@ -1,0 +1,23 @@
+原则：只借鉴思路、表结构、模块实现，不要复制整套代码；分模块看，关闭参考自己仿写，再做差异化改造。
+分成两大部分：①工单后端（service‑workorder）；②Spring‑AI‑Alibaba Agent 项目（service‑agent）；同时标注哪些不要直接抄。
+
+1. 工单项目推荐阅读 可以看看逻辑怎么实现的 具体编写 自己实现 提高编码能力
+https://github.com/calixforge/work-order-system-backend
+
+2. agent项目 多看spring ai alibaba 官方文档 重点是Rag Tool-Calling 
+
+
+
+可以写在你的 README.md：
+
+> 
+> 项目开发参考：
+> 
+> 
+> 1. 工单业务模块参考 calixforge/work‑order‑system‑backend 的业务模型与表设计，未复制业务代码；自行实现乐观锁并发、RabbitMQ 完整可靠性方案。
+> 2. Agent 模块基于 spring‑ai‑alibaba/examples 官方 demo 学习 Tool‑Calling、RAG 基础能力；额外实现工具调用审计、权限校验、异常降级、会话上下文裁剪等工程逻辑。
+> 3. RBAC 权限模型参考 ruoyi‑vue‑pro 的权限表设计思路，做轻量化裁剪适配本项目。
+
+
+本项目应该于 2026.9月份开学启动 按照我的计划大概一个月半完成 
+然后花一个月时间修改 准备简历 面试；并不断刷算法题（其实每天都应该刷） 并去了解考公 考编的那些题 实在是太搞了 又不是靠智商
