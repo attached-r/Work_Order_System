@@ -1,0 +1,28 @@
+server:  # 启动窗口 10001
+  port: 10001
+
+
+spring:
+  application:
+    name: WorkOrderSystem
+  # 配置mysql
+  datasource:
+    url: jdbc:mysql://localhost:3306/work_order_system
+    username: root
+    password: ${DB_PASSWORD:20050603RJ}
+    # hikari:  连接池信息配置 暂时默认
+
+  # 配置 Redis
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: ${REDIS_PASSWORD:20050603RJ}
+      database: 4
+      timeout: 10000  #
+
+
+# jwt配置
+jwt:
+  secret: iluhmq #签名密钥
+  timeout: 7200  # 过期时间 7200s
