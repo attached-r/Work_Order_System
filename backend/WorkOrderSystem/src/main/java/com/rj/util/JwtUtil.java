@@ -40,7 +40,7 @@ public class JwtUtil {
     /**
      * 校验并解析 token,成功返回 userId,失败或已过期时抛出异常
     */
-    public Long praseToken(String token){
+    public Long parseToken(String token){
         DecodedJWT decodedJWT = JWT.require(Algorithm.HMAC256(secret)). // 传入签名密钥
                 build().
                 verify(token); // 校验
