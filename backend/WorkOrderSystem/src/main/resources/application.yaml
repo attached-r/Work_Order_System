@@ -26,3 +26,8 @@ spring:
 jwt:
   secret: iluhmq #签名密钥
   timeout: 7200  # 过期时间 7200s
+
+# 密码哈希强度(BCrypt cost:合法 4-31,默认 10,生产建议 10-12)
+password:
+  bcrypt:
+    strength: 10
