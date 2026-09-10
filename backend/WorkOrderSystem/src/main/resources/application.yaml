@@ -1,6 +1,7 @@
 server:  # 启动窗口 10001
   port: 10001
 
+# 接口文档地址: http://localhost:10001/doc.html
 
 spring:
   application:

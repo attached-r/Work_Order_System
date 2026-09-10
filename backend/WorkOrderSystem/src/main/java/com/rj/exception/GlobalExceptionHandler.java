@@ -14,6 +14,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
  * 全局异常处理器,统一捕获异常并转换为标准响应 {@link Result}。
@@ -75,6 +76,15 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public Result<Void> handleMethodArgumentTypeMismatchException(MethodArgumentTypeMismatchException e) {
         return Result.fail(ResultCode.BAD_REQUEST.getCode(), "参数类型错误");
+    }
+
+    /**
+     * 静态资源不存在：如浏览器自动请求 /favicon.ico,或访问了不存在的路径。
+     * 单独处理,避免被兜底当成 500 系统异常刷 ERROR 日志。
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public Result<Void> handleNoResourceFoundException(NoResourceFoundException e) {
+        return Result.fail(ResultCode.NOT_FOUND);
     }
 
     /**

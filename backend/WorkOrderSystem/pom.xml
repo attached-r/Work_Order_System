@@ -87,11 +87,11 @@
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-crypto</artifactId>
         </dependency>
-        <!--knife4j 接口文档(Swagger 增强)-->
+        <!--knife4j 接口文档(Swagger 增强): Spring Boot 4 + springdoc-openapi 3.x 社区分支-->
         <dependency>
-            <groupId>com.github.xiaoymin</groupId>
-            <artifactId>knife4j-openapi3-jakarta-spring-boot-starter</artifactId>
-            <version>4.5.0</version>
+            <groupId>com.baizhukui</groupId>
+            <artifactId>knife4j-openapi3-boot4-spring-boot-starter</artifactId>
+            <version>5.6.0</version>
         </dependency>
     </dependencies>
 

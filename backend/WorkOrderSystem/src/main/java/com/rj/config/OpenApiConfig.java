@@ -48,5 +48,27 @@ public class OpenApiConfig {
                 .build();
     }
 
+    /**
+     * 分组配置：路径匹配
+     * @return 部门信息分组
+     */
+    @Bean
+    public GroupedOpenApi departmentOpenApi(){
+        return GroupedOpenApi.builder()
+                .group("部门信息模块")
+                .pathsToMatch("/department/**")
+                .build();
+    }
+    /**
+     * 分组配置：路径匹配
+     * @return 角色信息分组
+     */
+    @Bean
+    public GroupedOpenApi roleOpenApi(){
+        return GroupedOpenApi.builder()
+                .group("角色信息模块")
+                .pathsToMatch("/role/**")
+                .build();
+    }
     // 诸如上述 需要分组再编写
 }
