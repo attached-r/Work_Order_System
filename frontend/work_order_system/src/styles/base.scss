@@ -1,0 +1,150 @@
+// ---------------------------------------------------------------------------
+// 基础层:reset、排版基线、滚动条、可复用工具类
+// ---------------------------------------------------------------------------
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family:
+    'Plus Jakarta Sans Variable', 'PingFang SC', 'HarmonyOS Sans SC', 'Microsoft YaHei',
+    'Source Han Sans SC', -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--wo-ink-2);
+  background: var(--wo-canvas);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  // 中文小字重下等宽数字更整齐,工单编号/时间戳全靠它对齐
+  font-variant-numeric: tabular-nums;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0;
+  color: var(--wo-ink-1);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: var(--wo-brand);
+  text-decoration: none;
+  transition: color var(--wo-dur-fast) var(--wo-ease);
+
+  &:hover {
+    color: var(--wo-brand-hover);
+  }
+}
+
+::selection {
+  background: var(--wo-brand-wash-2);
+  color: var(--wo-ink-1);
+}
+
+// ---- 滚动条:细、淡、悬浮才显形 ----
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--wo-hairline-strong);
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: content-box;
+
+  &:hover {
+    background: var(--wo-ink-4);
+    background-clip: content-box;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 工具类:只保留真正高频的几个,不做过度的原子化
+// ---------------------------------------------------------------------------
+
+// 等宽数字:编号、时间、统计值
+.wo-num {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+// 全大写小字标签,用于分区标题上方的「眉毛」文案
+.wo-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--wo-ink-3);
+}
+
+// 卡片:1px 发丝线 + 极轻阴影,是全局最基本的容器
+.wo-card {
+  background: var(--wo-surface);
+  border: 1px solid var(--wo-hairline);
+  border-radius: var(--wo-radius);
+  box-shadow: var(--wo-shadow-xs);
+}
+
+.wo-text-2 {
+  color: var(--wo-ink-2);
+}
+.wo-text-3 {
+  color: var(--wo-ink-3);
+}
+
+// ---------------------------------------------------------------------------
+// 页面切换过渡:淡入 + 极轻微上移,克制到几乎察觉不到但有质感
+// ---------------------------------------------------------------------------
+.wo-fade-enter-active {
+  transition:
+    opacity var(--wo-dur) var(--wo-ease-out),
+    transform var(--wo-dur) var(--wo-ease-out);
+}
+
+.wo-fade-leave-active {
+  transition: opacity var(--wo-dur-fast) var(--wo-ease);
+}
+
+.wo-fade-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+.wo-fade-leave-to {
+  opacity: 0;
+}
+
+// 尊重系统的「减少动态效果」偏好
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

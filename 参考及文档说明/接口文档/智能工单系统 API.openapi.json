@@ -1,0 +1,2003 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "智能工单系统 API",
+    "description": "智能工单管理系统接口文档",
+    "version": "1.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:10001",
+      "description": "Generated server url"
+    }
+  ],
+  "paths": {
+    "/user/{userId}": {
+      "put": {
+        "tags": [
+          "用户管理"
+        ],
+        "summary": "修改用户信息",
+        "operationId": "updateUser",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultVoid"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "用户管理"
+        ],
+        "summary": "删除用户",
+        "operationId": "deleteUser",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultVoid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/{userId}/status": {
+      "put": {
+        "tags": [
+          "用户管理"
+        ],
+        "summary": "启停用账号",
+        "operationId": "updateStatus",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserStatusDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultVoid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/{userId}/roles": {
+      "put": {
+        "tags": [
+          "用户管理"
+        ],
+        "summary": "分配角色",
+        "operationId": "assignRoles",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignRoleDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultVoid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/{userId}/password": {
+      "put": {
+        "tags": [
+          "用户管理"
+        ],
+        "summary": "重置密码",
+        "operationId": "resetPassword",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultVoid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/{userId}/department": {
+      "put": {
+        "tags": [
+          "用户管理"
+        ],
+        "summary": "调整所属部门",
+        "operationId": "assignDepartment",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignDepartmentDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultVoid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/role/{roleId}/permissions": {
+      "put": {
+        "tags": [
+          "角色管理"
+        ],
+        "summary": "分配权限",
+        "operationId": "assignPermissions",
+        "parameters": [
+          {
+            "name": "roleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignPermissionDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultVoid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/department/{id}": {
+      "put": {
+        "tags": [
+          "部门管理"
+        ],
+        "summary": "修改部门",
+        "operationId": "update",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DepartmentDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultVoid"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "部门管理"
+        ],
+        "summary": "删除部门",
+        "operationId": "delete",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultVoid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workorder": {
+      "post": {
+        "tags": [
+          "工单管理"
+        ],
+        "summary": "创建工单",
+        "operationId": "create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkOrderCreateDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultLong"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workorder/{id}/withdraw": {
+      "post": {
+        "tags": [
+          "工单管理"
+        ],
+        "summary": "撤回/取消工单",
+        "operationId": "withdraw",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WithdrawDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultVoid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workorder/{id}/review": {
+      "post": {
+        "tags": [
+          "工单管理"
+        ],
+        "summary": "审核工单",
+        "operationId": "review",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultVoid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workorder/{id}/resubmit": {
+      "post": {
+        "tags": [
+          "工单管理"
+        ],
+        "summary": "重新提交工单",
+        "operationId": "resubmit",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkOrderCreateDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultVoid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workorder/{id}/process": {
+      "post": {
+        "tags": [
+          "工单管理"
+        ],
+        "summary": "处理完成",
+        "operationId": "process",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultVoid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workorder/{id}/dispatch": {
+      "post": {
+        "tags": [
+          "工单管理"
+        ],
+        "summary": "派单/转派",
+        "operationId": "dispatch",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DispatchDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultVoid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workorder/{id}/accept": {
+      "post": {
+        "tags": [
+          "工单管理"
+        ],
+        "summary": "验收工单",
+        "operationId": "accept",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultVoid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/register": {
+      "post": {
+        "tags": [
+          "用户管理"
+        ],
+        "summary": "注册",
+        "operationId": "register",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultVoid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/logout": {
+      "post": {
+        "tags": [
+          "用户管理"
+        ],
+        "summary": "登出",
+        "operationId": "logout",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultVoid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/login": {
+      "post": {
+        "tags": [
+          "用户管理"
+        ],
+        "summary": "登录",
+        "operationId": "login",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultString"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/department": {
+      "post": {
+        "tags": [
+          "部门管理"
+        ],
+        "summary": "新增部门",
+        "operationId": "add",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DepartmentDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultVoid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workorder/{id}": {
+      "get": {
+        "tags": [
+          "工单管理"
+        ],
+        "summary": "工单详情",
+        "operationId": "detail",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultWorkOrderDetailVO"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workorder/page": {
+      "get": {
+        "tags": [
+          "工单管理"
+        ],
+        "summary": "工单分页列表",
+        "operationId": "page",
+        "parameters": [
+          {
+            "name": "current",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "default": 1
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "default": 10
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "orderType",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "keyword",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultPageResultWorkOrderVO"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/page": {
+      "get": {
+        "tags": [
+          "用户管理"
+        ],
+        "summary": "用户分页列表",
+        "operationId": "page_1",
+        "parameters": [
+          {
+            "name": "current",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "default": 1
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "default": 10
+            }
+          },
+          {
+            "name": "keyword",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultPageResultUserVO"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/me": {
+      "get": {
+        "tags": [
+          "用户管理"
+        ],
+        "summary": "当前登录用户信息",
+        "operationId": "me",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultUserVO"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/role/list": {
+      "get": {
+        "tags": [
+          "角色管理"
+        ],
+        "summary": "角色列表",
+        "operationId": "list",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultListRole"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/permission/tree": {
+      "get": {
+        "tags": [
+          "权限管理"
+        ],
+        "summary": "权限树",
+        "operationId": "tree",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultListPermissionVO"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/department/list": {
+      "get": {
+        "tags": [
+          "部门管理"
+        ],
+        "summary": "部门列表",
+        "operationId": "list_1",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultListDepartment"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "UpdateUserDTO": {
+        "type": "object",
+        "description": "修改用户基本信息请求",
+        "properties": {
+          "realName": {
+            "type": "string",
+            "description": "真实姓名",
+            "maxLength": 50,
+            "minLength": 0
+          },
+          "phone": {
+            "type": "string",
+            "description": "联系电话,可空",
+            "maxLength": 20,
+            "minLength": 0
+          },
+          "departmentId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "所属部门ID,可空表示不调整"
+          }
+        },
+        "required": [
+          "realName"
+        ]
+      },
+      "ResultVoid": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {},
+          "timestamp": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "UpdateUserStatusDTO": {
+        "type": "object",
+        "description": "修改账号状态请求",
+        "properties": {
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "description": "账号状态:0禁用 1启用",
+            "maximum": 1,
+            "minimum": 0
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "AssignRoleDTO": {
+        "type": "object",
+        "description": "分配角色请求",
+        "properties": {
+          "roleIds": {
+            "type": "array",
+            "description": "角色ID列表,至少一个",
+            "items": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "roleIds"
+        ]
+      },
+      "ResetPasswordDTO": {
+        "type": "object",
+        "description": "重置密码请求",
+        "properties": {
+          "newPassword": {
+            "type": "string",
+            "description": "新密码",
+            "maxLength": 2147483647,
+            "minLength": 6
+          }
+        },
+        "required": [
+          "newPassword"
+        ]
+      },
+      "AssignDepartmentDTO": {
+        "type": "object",
+        "description": "调整所属部门请求",
+        "properties": {
+          "departmentId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "部门ID"
+          }
+        },
+        "required": [
+          "departmentId"
+        ]
+      },
+      "AssignPermissionDTO": {
+        "type": "object",
+        "description": "分配权限请求",
+        "properties": {
+          "permissionIds": {
+            "type": "array",
+            "description": "权限ID列表,可为空列表表示清空",
+            "items": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        },
+        "required": [
+          "permissionIds"
+        ]
+      },
+      "DepartmentDTO": {
+        "type": "object",
+        "description": "部门新增/修改请求参数",
+        "properties": {
+          "deptCode": {
+            "type": "string",
+            "description": "部门编码(唯一,代码判断用)",
+            "maxLength": 20,
+            "minLength": 0
+          },
+          "deptName": {
+            "type": "string",
+            "description": "部门名称",
+            "maxLength": 50,
+            "minLength": 0
+          },
+          "remark": {
+            "type": "string",
+            "description": "备注,可空",
+            "maxLength": 200,
+            "minLength": 0
+          }
+        },
+        "required": [
+          "deptCode",
+          "deptName"
+        ]
+      },
+      "WorkOrderCreateDTO": {
+        "type": "object",
+        "description": "创建工单请求参数",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "工单标题",
+            "maxLength": 200,
+            "minLength": 0
+          },
+          "content": {
+            "type": "string",
+            "description": "工单描述,可空",
+            "maxLength": 5000,
+            "minLength": 0
+          },
+          "orderType": {
+            "type": "integer",
+            "format": "int32",
+            "description": "工单类型:1故障报修 2资源申请 3需求变更",
+            "maximum": 3,
+            "minimum": 1
+          },
+          "priority": {
+            "type": "integer",
+            "format": "int32",
+            "description": "优先级:1高 2中 3低",
+            "maximum": 3,
+            "minimum": 1
+          },
+          "expireTime": {
+            "type": "string",
+            "format": "date-time",
+            "description": "超时时间,可空;不传则默认 72 小时后到期"
+          },
+          "resources": {
+            "type": "array",
+            "description": "资源明细列表,可空",
+            "items": {
+              "$ref": "#/components/schemas/WorkOrderResourceDTO"
+            }
+          }
+        },
+        "required": [
+          "orderType",
+          "priority",
+          "title"
+        ]
+      },
+      "WorkOrderResourceDTO": {
+        "type": "object",
+        "description": "工单资源明细",
+        "properties": {
+          "resourceType": {
+            "type": "string",
+            "description": "资源类别:服务器/带宽/软件许可 等",
+            "maxLength": 50,
+            "minLength": 0
+          },
+          "resourceName": {
+            "type": "string",
+            "description": "资源名称/规格描述",
+            "maxLength": 200,
+            "minLength": 0
+          },
+          "quantity": {
+            "type": "number",
+            "description": "数量,必须大于0",
+            "minimum": 0.01
+          },
+          "unit": {
+            "type": "string",
+            "description": "单位:台/MBps/个 等",
+            "maxLength": 20,
+            "minLength": 0
+          },
+          "remark": {
+            "type": "string",
+            "description": "申请说明,可空",
+            "maxLength": 500,
+            "minLength": 0
+          }
+        },
+        "required": [
+          "quantity",
+          "resourceName",
+          "resourceType"
+        ]
+      },
+      "ResultLong": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "timestamp": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "WithdrawDTO": {
+        "type": "object",
+        "description": "工单撤回/取消请求参数",
+        "properties": {
+          "remark": {
+            "type": "string",
+            "description": "撤回/取消原因,可空",
+            "maxLength": 500,
+            "minLength": 0
+          }
+        }
+      },
+      "ReviewDTO": {
+        "type": "object",
+        "description": "工单审核请求参数",
+        "properties": {
+          "approved": {
+            "type": "boolean",
+            "description": "是否通过:true 通过(→待派单) false 驳回(→已驳回)"
+          },
+          "remark": {
+            "type": "string",
+            "description": "审核意见/驳回原因,可空",
+            "maxLength": 500,
+            "minLength": 0
+          }
+        },
+        "required": [
+          "approved"
+        ]
+      },
+      "ProcessDTO": {
+        "type": "object",
+        "description": "处理完成请求参数",
+        "properties": {
+          "remark": {
+            "type": "string",
+            "description": "处理结果说明,可空",
+            "maxLength": 500,
+            "minLength": 0
+          }
+        }
+      },
+      "DispatchDTO": {
+        "type": "object",
+        "description": "派单/转派请求参数",
+        "properties": {
+          "handlerId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "目标处理人用户ID"
+          },
+          "remark": {
+            "type": "string",
+            "description": "派单/转派说明,可空",
+            "maxLength": 500,
+            "minLength": 0
+          }
+        },
+        "required": [
+          "handlerId"
+        ]
+      },
+      "AcceptDTO": {
+        "type": "object",
+        "description": "工单验收请求参数",
+        "properties": {
+          "approved": {
+            "type": "boolean",
+            "description": "是否通过:true 通过(→已完成) false 退回(→处理中)"
+          },
+          "remark": {
+            "type": "string",
+            "description": "验收意见/退回原因,可空",
+            "maxLength": 500,
+            "minLength": 0
+          }
+        },
+        "required": [
+          "approved"
+        ]
+      },
+      "RegisterDTO": {
+        "type": "object",
+        "description": "注册请求参数",
+        "properties": {
+          "username": {
+            "type": "string",
+            "description": "登录账号",
+            "maxLength": 50,
+            "minLength": 0
+          },
+          "password": {
+            "type": "string",
+            "description": "密码",
+            "maxLength": 2147483647,
+            "minLength": 6
+          },
+          "confirmPassword": {
+            "type": "string",
+            "description": "确认密码,需与密码一致",
+            "minLength": 1
+          },
+          "realName": {
+            "type": "string",
+            "description": "真实姓名",
+            "maxLength": 50,
+            "minLength": 0
+          },
+          "phone": {
+            "type": "string",
+            "description": "联系电话,可空",
+            "maxLength": 20,
+            "minLength": 0
+          },
+          "departmentId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "所属部门ID,可空"
+          }
+        },
+        "required": [
+          "confirmPassword",
+          "password",
+          "realName",
+          "username"
+        ]
+      },
+      "LoginDTO": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "description": "账号",
+            "minLength": 1
+          },
+          "password": {
+            "type": "string",
+            "description": "密码",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "password",
+          "username"
+        ]
+      },
+      "ResultString": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "ResultWorkOrderDetailVO": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/WorkOrderDetailVO"
+          },
+          "timestamp": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "WorkOrderDetailVO": {
+        "type": "object",
+        "description": "工单详情",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "description": "工单ID"
+          },
+          "orderNo": {
+            "type": "string",
+            "description": "工单编号"
+          },
+          "userId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "提单人ID"
+          },
+          "departmentId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "归属部门ID"
+          },
+          "handlerId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "处理人ID,派单前为空"
+          },
+          "title": {
+            "type": "string",
+            "description": "工单标题"
+          },
+          "content": {
+            "type": "string",
+            "description": "工单描述"
+          },
+          "orderType": {
+            "type": "integer",
+            "format": "int32",
+            "description": "工单类型:1故障报修 2资源申请 3需求变更"
+          },
+          "priority": {
+            "type": "integer",
+            "format": "int32",
+            "description": "优先级:1高 2中 3低"
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "description": "状态:0待审核 1待派单 2处理中 3待验收 4已完成 5已驳回 6已取消 7已超时"
+          },
+          "statusDesc": {
+            "type": "string",
+            "description": "状态名称"
+          },
+          "remark": {
+            "type": "string",
+            "description": "备注/驳回原因/关闭说明"
+          },
+          "createTime": {
+            "type": "string",
+            "format": "date-time",
+            "description": "创建时间"
+          },
+          "updateTime": {
+            "type": "string",
+            "format": "date-time",
+            "description": "更新时间"
+          },
+          "expireTime": {
+            "type": "string",
+            "format": "date-time",
+            "description": "超时时间"
+          },
+          "resources": {
+            "type": "array",
+            "description": "资源明细",
+            "items": {
+              "$ref": "#/components/schemas/WorkOrderResource"
+            }
+          },
+          "logs": {
+            "type": "array",
+            "description": "操作日志(按时间升序)",
+            "items": {
+              "$ref": "#/components/schemas/WorkOrderOperateLog"
+            }
+          }
+        }
+      },
+      "WorkOrderOperateLog": {
+        "type": "object",
+        "description": "工单操作日志实体",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "description": "主键"
+          },
+          "orderId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "工单ID"
+          },
+          "operatorId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "操作人ID(user.id)"
+          },
+          "operateType": {
+            "type": "integer",
+            "format": "int32",
+            "description": "操作事件:1提交 2审核通过 3审核驳回 4派单 5处理完成 6验收通过 7退回处理 8转派 9撤回/取消 10超时关闭"
+          },
+          "fromStatus": {
+            "type": "integer",
+            "format": "int32",
+            "description": "变更前状态(0-7),首次提交为 NULL"
+          },
+          "toStatus": {
+            "type": "integer",
+            "format": "int32",
+            "description": "变更后状态(0-7)"
+          },
+          "toUserId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "派单/转派目标处理人ID,可空"
+          },
+          "remark": {
+            "type": "string",
+            "description": "操作备注,可空"
+          },
+          "createTime": {
+            "type": "string",
+            "format": "date-time",
+            "description": "操作时间"
+          }
+        }
+      },
+      "WorkOrderResource": {
+        "type": "object",
+        "description": "工单资源明细实体",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "description": "主键"
+          },
+          "orderId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "所属工单ID"
+          },
+          "resourceType": {
+            "type": "string",
+            "description": "资源类别:服务器/带宽/软件许可 等"
+          },
+          "resourceName": {
+            "type": "string",
+            "description": "资源名称/规格描述"
+          },
+          "quantity": {
+            "type": "number",
+            "description": "数量"
+          },
+          "unit": {
+            "type": "string",
+            "description": "单位:台/MBps/个 等"
+          },
+          "remark": {
+            "type": "string",
+            "description": "申请说明,可空"
+          },
+          "createTime": {
+            "type": "string",
+            "format": "date-time",
+            "description": "创建时间"
+          }
+        }
+      },
+      "PageResultWorkOrderVO": {
+        "type": "object",
+        "properties": {
+          "records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkOrderVO"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "current": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "ResultPageResultWorkOrderVO": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/PageResultWorkOrderVO"
+          },
+          "timestamp": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "WorkOrderVO": {
+        "type": "object",
+        "description": "工单列表项",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "description": "工单ID"
+          },
+          "orderNo": {
+            "type": "string",
+            "description": "工单编号"
+          },
+          "userId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "提单人ID"
+          },
+          "departmentId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "归属部门ID"
+          },
+          "handlerId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "处理人ID,派单前为空"
+          },
+          "title": {
+            "type": "string",
+            "description": "工单标题"
+          },
+          "orderType": {
+            "type": "integer",
+            "format": "int32",
+            "description": "工单类型:1故障报修 2资源申请 3需求变更"
+          },
+          "priority": {
+            "type": "integer",
+            "format": "int32",
+            "description": "优先级:1高 2中 3低"
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "description": "状态:0待审核 1待派单 2处理中 3待验收 4已完成 5已驳回 6已取消 7已超时"
+          },
+          "statusDesc": {
+            "type": "string",
+            "description": "状态名称"
+          },
+          "createTime": {
+            "type": "string",
+            "format": "date-time",
+            "description": "创建时间"
+          },
+          "updateTime": {
+            "type": "string",
+            "format": "date-time",
+            "description": "更新时间"
+          },
+          "expireTime": {
+            "type": "string",
+            "format": "date-time",
+            "description": "超时时间"
+          }
+        }
+      },
+      "PageResultUserVO": {
+        "type": "object",
+        "properties": {
+          "records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserVO"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "current": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "ResultPageResultUserVO": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/PageResultUserVO"
+          },
+          "timestamp": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "UserVO": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "用户id"
+          },
+          "username": {
+            "type": "string",
+            "description": "用户名"
+          },
+          "realName": {
+            "type": "string",
+            "description": "真实姓名"
+          },
+          "departmentId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "所属部门id"
+          },
+          "departmentName": {
+            "type": "string",
+            "description": "所属部门名称"
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "description": "状态：1启用 0停用"
+          },
+          "roles": {
+            "type": "array",
+            "description": "角色标识列表,如 SUBMITTER",
+            "items": {
+              "type": "string"
+            }
+          },
+          "perms": {
+            "type": "array",
+            "description": "权限码列表,如 workorder:review",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "ResultUserVO": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/UserVO"
+          },
+          "timestamp": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "ResultListRole": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Role"
+            }
+          },
+          "timestamp": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "Role": {
+        "type": "object",
+        "description": "角色实体",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "description": "主键"
+          },
+          "roleCode": {
+            "type": "string",
+            "description": "角色标识:SUBMITTER/REVIEWER/DISPATCHER/HANDLER/ADMIN(代码判断用)"
+          },
+          "roleName": {
+            "type": "string",
+            "description": "角色名称:提单人/审核人/派单人/处理人/管理员(展示用)"
+          },
+          "remark": {
+            "type": "string",
+            "description": "职责说明"
+          },
+          "createTime": {
+            "type": "string",
+            "format": "date-time",
+            "description": "创建时间"
+          }
+        }
+      },
+      "PermissionVO": {
+        "type": "object",
+        "description": "权限树节点",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "description": "权限ID"
+          },
+          "permCode": {
+            "type": "string",
+            "description": "权限标识:如 workorder:review"
+          },
+          "permName": {
+            "type": "string",
+            "description": "权限名称:如 审核工单"
+          },
+          "parentId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "父权限ID,一级权限为 null"
+          },
+          "children": {
+            "type": "array",
+            "description": "子权限,无子权限时为空列表",
+            "items": {
+              "$ref": "#/components/schemas/PermissionVO"
+            }
+          }
+        }
+      },
+      "ResultListPermissionVO": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PermissionVO"
+            }
+          },
+          "timestamp": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "Department": {
+        "type": "object",
+        "description": "部门实体",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "description": "主键"
+          },
+          "deptCode": {
+            "type": "string",
+            "description": "部门编码(唯一,代码判断用)"
+          },
+          "deptName": {
+            "type": "string",
+            "description": "部门名称"
+          },
+          "remark": {
+            "type": "string",
+            "description": "备注"
+          },
+          "createTime": {
+            "type": "string",
+            "format": "date-time",
+            "description": "创建时间"
+          }
+        }
+      },
+      "ResultListDepartment": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Department"
+            }
+          },
+          "timestamp": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      }
+    }
+  }
+}

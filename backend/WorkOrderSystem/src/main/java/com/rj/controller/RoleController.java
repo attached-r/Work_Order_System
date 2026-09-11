@@ -2,14 +2,14 @@ package com.rj.controller;
 
 import com.rj.common.Result;
 import com.rj.common.annotation.RequiresPermission;
+import com.rj.model.dto.AssignPermissionDTO;
 import com.rj.model.pojo.Role;
 import com.rj.service.IRoleService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -29,5 +29,19 @@ public class RoleController {
     @GetMapping("/list")
     public Result<List<Role>> list() {
         return Result.success(roleService.listAll());
+    }
+
+    // 新增角色 由于角色基本上固定的 不需要修改
+
+    /**
+     * 覆盖式分配角色权限:以本次提交的权限列表为准,空列表表示回收全部权限。
+     */
+    @Operation(summary = "分配权限")
+    @RequiresPermission("user:manage")
+    @PutMapping("/{roleId}/permissions")
+    public Result<Void> assignPermissions(@PathVariable Long roleId,
+                                          @Valid @RequestBody AssignPermissionDTO assignPermissionDTO) {
+        roleService.assignPermissions(roleId, assignPermissionDTO.getPermissionIds());
+        return Result.success();
     }
 }

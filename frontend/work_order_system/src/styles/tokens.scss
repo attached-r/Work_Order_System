@@ -1,0 +1,110 @@
+// ---------------------------------------------------------------------------
+// 设计令牌
+//
+// 这一层是「淡色系 · 蓝白」的全部家底。页面里不要出现裸的 #hex,一律走变量,
+// 以后要调色只改这里。全部用 CSS 自定义属性,方便运行时按需覆盖。
+// ---------------------------------------------------------------------------
+
+:root {
+  // ---- 底层表面:近白,但带一点蓝的冷调 ----
+  --wo-canvas: #f4f7fc; // 页面底
+  --wo-surface: #ffffff; // 卡片底
+  --wo-surface-sunken: #eef3fa; // 凹陷区(表头、代码块)
+  --wo-surface-raised: #fbfcfe; // 悬浮区
+
+  // ---- 主色阶:一支明确的蓝,其余靠淡底衬托 ----
+  --wo-brand: #2f6fed;
+  --wo-brand-hover: #1e5bd8;
+  --wo-brand-active: #1749b4;
+  --wo-brand-wash: #eaf1fe; // 主色极淡底(选中、高亮行)
+  --wo-brand-wash-2: #dbe7fd; // 再深一档的淡底
+  --wo-brand-ring: rgba(47, 111, 237, 0.16); // 聚焦光晕
+
+  // ---- 文字:三级足够,不要更多 ----
+  --wo-ink-1: #16202e; // 标题 / 正文强调
+  --wo-ink-2: #4a5a70; // 正文 / 表单标签
+  --wo-ink-3: #8798ae; // 辅助说明 / 占位
+  --wo-ink-4: #aab8ca; // 禁用
+
+  // ---- 描边:一律 1px 发丝线,本项目几乎不用重阴影 ----
+  --wo-hairline: #e2e9f3;
+  --wo-hairline-strong: #d3dded;
+  --wo-hairline-brand: #bcd2fb;
+
+  // ---- 阴影:极轻,只在悬浮/浮层时出现 ----
+  --wo-shadow-xs: 0 1px 2px rgba(22, 32, 46, 0.04);
+  --wo-shadow-sm: 0 2px 8px rgba(22, 32, 46, 0.06);
+  --wo-shadow-md: 0 8px 24px rgba(22, 32, 46, 0.08);
+  --wo-shadow-lg: 0 16px 48px rgba(22, 32, 46, 0.12);
+
+  // ---- 间距节奏:8 的倍数,唯一例外是 6px 用于紧凑处 ----
+  --wo-space-1: 4px;
+  --wo-space-2: 8px;
+  --wo-space-3: 12px;
+  --wo-space-4: 16px;
+  --wo-space-5: 24px;
+  --wo-space-6: 32px;
+  --wo-space-7: 48px;
+  --wo-space-8: 64px;
+
+  --wo-radius-sm: 6px;
+  --wo-radius: 10px;
+  --wo-radius-lg: 14px;
+
+  --wo-sidebar-w: 232px;
+  --wo-sidebar-w-collapsed: 68px;
+  --wo-header-h: 60px;
+
+  // ---- 动效:统一缓动,不要各处自己写 ----
+  --wo-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --wo-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --wo-dur-fast: 0.15s;
+  --wo-dur: 0.24s;
+  --wo-dur-slow: 0.42s;
+
+  // ---- 工单状态色:每个状态一组「深字 / 淡底 / 圆点」,淡雅不刺眼 ----
+  --wo-st-0-fg: #9a6a11;
+  --wo-st-0-bg: #fdf6e6;
+  --wo-st-0-dot: #d9a31b; // 0 待审核
+
+  --wo-st-1-fg: #1e5bd8;
+  --wo-st-1-bg: #eaf1fe;
+  --wo-st-1-dot: #2f6fed; // 1 待派单
+
+  --wo-st-2-fg: #4f46b8;
+  --wo-st-2-bg: #efeffd;
+  --wo-st-2-dot: #6c63e0; // 2 处理中
+
+  --wo-st-3-fg: #8b4fbf;
+  --wo-st-3-bg: #f7eefc;
+  --wo-st-3-dot: #a96fd6; // 3 待验收
+
+  --wo-st-4-fg: #1f7a4d;
+  --wo-st-4-bg: #e9f7f0;
+  --wo-st-4-dot: #2fa36b; // 4 已完成
+
+  --wo-st-5-fg: #b3324a;
+  --wo-st-5-bg: #fdecef;
+  --wo-st-5-dot: #e04b6a; // 5 已驳回
+
+  --wo-st-6-fg: #64748b;
+  --wo-st-6-bg: #f1f5f9;
+  --wo-st-6-dot: #94a3b8; // 6 已取消
+
+  --wo-st-7-fg: #b5531a;
+  --wo-st-7-bg: #fdf0e6;
+  --wo-st-7-dot: #e07b39; // 7 已超时
+
+  // ---- 优先级色 ----
+  --wo-pr-1-fg: #b3324a;
+  --wo-pr-1-bg: #fdecef;
+  --wo-pr-1-dot: #e04b6a; // 高
+
+  --wo-pr-2-fg: #9a6a11;
+  --wo-pr-2-bg: #fdf6e6;
+  --wo-pr-2-dot: #d9a31b; // 中
+
+  --wo-pr-3-fg: #4a5a70;
+  --wo-pr-3-bg: #f1f5f9;
+  --wo-pr-3-dot: #94a3b8; // 低
+}

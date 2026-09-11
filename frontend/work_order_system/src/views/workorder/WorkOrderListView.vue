@@ -1,0 +1,489 @@
+<script setup lang="ts">
+/**
+ * 工单列表
+ *
+ * 页面的重心是"快速定位到要看的那批工单",所以做了两层筛选:
+ *   1. 顶部状态条 —— 带数量的分段控件,一眼看到各状态积压情况,点一下就筛;
+ *   2. 下方条件栏 —— 关键词 / 类型 / 状态,处理更精确的组合查询。
+ *
+ * 两张入口共用同一份 query,切换时状态条与下拉框自动保持一致。
+ */
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import PageHeader from '@/components/PageHeader.vue'
+import StatusTag from '@/components/StatusTag.vue'
+import PriorityTag from '@/components/PriorityTag.vue'
+import {
+  ORDER_TYPE_OPTIONS,
+  STATUS_OPTIONS,
+  getOrderTypeLabel,
+  getStatusLabel,
+  getStatusTone,
+} from '@/constants/workorder'
+import { MOCK_WORK_ORDERS, MOCK_USERS, mockWorkOrderPage } from '@/mock'
+import { formatRelative } from '@/utils/datetime'
+import { useUserStore } from '@/stores/user'
+import type { WorkOrderVO } from '@/types/domain'
+
+const router = useRouter()
+const route = useRoute()
+const userStore = useUserStore()
+
+const loading = ref(false)
+const rows = ref<WorkOrderVO[]>([])
+const total = ref(0)
+
+const query = reactive({
+  current: 1,
+  size: 10,
+  status: null as number | null,
+  orderType: null as number | null,
+  keyword: '',
+})
+
+/** 用户 id -> 姓名,表格里展示提单人/处理人 */
+const userMap = computed(() => {
+  const m = new Map<number, string>()
+  for (const u of MOCK_USERS) m.set(u.userId, u.realName)
+  return m
+})
+
+function userName(id: number | null): string {
+  if (id === null) return '—'
+  return userMap.value.get(id) ?? `用户 ${id}`
+}
+
+/**
+ * 状态条数据:各状态的工单数。
+ * 统计口径跟随「除状态外的其他筛选条件」,这样各状态数字之和等于不加状态筛选的总数,
+ * 不会出现"点进去数量对不上"的困惑。
+ */
+const statusCounts = computed(() => {
+  const base = MOCK_WORK_ORDERS.filter((o) => {
+    if (query.orderType !== null && o.orderType !== query.orderType) return false
+    const kw = query.keyword.trim().toLowerCase()
+    if (kw && !o.title.toLowerCase().includes(kw) && !o.orderNo.toLowerCase().includes(kw)) return false
+    return true
+  })
+
+  return STATUS_OPTIONS.map((opt) => ({
+    value: opt.value,
+    label: opt.label,
+    tone: getStatusTone(opt.value),
+    count: base.filter((o) => o.status === opt.value).length,
+  }))
+})
+
+const totalWithoutStatus = computed(() =>
+  statusCounts.value.reduce((sum, s) => sum + s.count, 0),
+)
+
+// TODO(api): 换成 GET /workorder/page
+async function load() {
+  loading.value = true
+  try {
+    // 模拟网络延迟,让骨架/loading 态在页面上真实可见
+    await new Promise((r) => setTimeout(r, 180))
+    const res = mockWorkOrderPage({
+      current: query.current,
+      size: query.size,
+      status: query.status,
+      orderType: query.orderType,
+      keyword: query.keyword,
+    })
+    rows.value = res.records
+    total.value = res.total
+  } finally {
+    loading.value = false
+  }
+}
+
+function resetFilters() {
+  query.keyword = ''
+  query.orderType = null
+  query.status = null
+  query.current = 1
+  // 若上面几个字段本来就已经是空,watch 不会触发,所以这里显式再查一次
+  void load()
+}
+
+/** 点状态条:再点一次取消筛选 */
+function pickStatus(value: number) {
+  query.status = query.status === value ? null : value
+  query.current = 1
+}
+
+/** 「全部」:清掉状态筛选 */
+function clearStatus() {
+  query.status = null
+  query.current = 1
+}
+
+/** 回到第一页并重新查询,用于关键词/下拉框变更 */
+function search() {
+  query.current = 1
+  void load()
+}
+
+// 任一筛选条件变化都回到第一页,否则会停在一个不存在的页码上
+watch(
+  () => [query.status, query.orderType],
+  () => {
+    query.current = 1
+    void load()
+  },
+)
+
+function openDetail(row: WorkOrderVO) {
+  router.push({ name: 'workorder-detail', params: { id: row.id } })
+}
+
+onMounted(() => {
+  // 支持从工作台带 ?status= 跳进来,直接落到对应筛选
+  const s = route.query.status
+  if (typeof s === 'string' && s !== '') {
+    const n = Number(s)
+    if (Number.isFinite(n)) query.status = n
+  }
+  void load()
+})
+</script>
+
+<template>
+  <div class="wo-list">
+    <PageHeader
+      eyebrow="Work Orders"
+      title="工单列表"
+      description="查看你有权限访问的全部工单,支持按状态、类型与关键词组合筛选。"
+    >
+      <template #actions>
+        <el-button @click="load">
+          <el-icon><Refresh /></el-icon>
+          刷新
+        </el-button>
+        <el-button
+          v-if="userStore.hasPerm('workorder:create')"
+          type="primary"
+          @click="router.push({ name: 'workorder-create' })"
+        >
+          <el-icon><Plus /></el-icon>
+          提交工单
+        </el-button>
+      </template>
+    </PageHeader>
+
+    <!-- ============ 状态条 ============ -->
+    <section class="status-bar" aria-label="按状态筛选">
+      <button
+        type="button"
+        class="status-chip"
+        :class="{ 'is-active': query.status === null }"
+        @click="clearStatus"
+      >
+        <span class="status-chip__label">全部</span>
+        <span class="status-chip__count">{{ totalWithoutStatus }}</span>
+      </button>
+
+      <button
+        v-for="s in statusCounts"
+        :key="s.value"
+        type="button"
+        class="status-chip"
+        :class="{ 'is-active': query.status === s.value, 'is-empty': s.count === 0 }"
+        :style="{ '--fg': `var(--wo-st-${s.tone}-fg)`, '--bg': `var(--wo-st-${s.tone}-bg)`, '--dot': `var(--wo-st-${s.tone}-dot)` }"
+        @click="pickStatus(s.value)"
+      >
+        <i class="status-chip__dot" aria-hidden="true" />
+        <span class="status-chip__label">{{ s.label }}</span>
+        <span class="status-chip__count">{{ s.count }}</span>
+      </button>
+    </section>
+
+    <!-- ============ 条件栏 ============ -->
+    <section class="filters wo-card">
+      <el-input
+        v-model="query.keyword"
+        placeholder="搜索工单标题或编号"
+        clearable
+        class="filters__search"
+        @keyup.enter="search"
+        @clear="search"
+      >
+        <template #prefix>
+          <el-icon><Search /></el-icon>
+        </template>
+      </el-input>
+
+      <el-select v-model="query.orderType" placeholder="全部类型" clearable class="filters__select">
+        <el-option v-for="t in ORDER_TYPE_OPTIONS" :key="t.value" :label="t.label" :value="t.value" />
+      </el-select>
+
+      <el-select v-model="query.status" placeholder="全部状态" clearable class="filters__select">
+        <el-option v-for="s in STATUS_OPTIONS" :key="s.value" :label="s.label" :value="s.value" />
+      </el-select>
+
+      <el-button @click="search">查询</el-button>
+      <el-button text @click="resetFilters">重置</el-button>
+    </section>
+
+    <!-- ============ 表格 ============ -->
+    <section class="table-card wo-card">
+      <el-table
+        v-loading="loading"
+        :data="rows"
+        row-key="id"
+        class="wo-table"
+        @row-click="openDetail"
+      >
+        <el-table-column label="工单编号" width="150">
+          <template #default="{ row }">
+            <span class="order-no wo-num">{{ row.orderNo }}</span>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="标题" min-width="230" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span class="order-title">{{ row.title }}</span>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="类型" width="104">
+          <template #default="{ row }">
+            <span class="wo-text-2">{{ getOrderTypeLabel(row.orderType) }}</span>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="优先级" width="88">
+          <template #default="{ row }">
+            <PriorityTag :priority="row.priority" />
+          </template>
+        </el-table-column>
+
+        <el-table-column label="状态" width="106">
+          <template #default="{ row }">
+            <StatusTag :status="row.status" />
+          </template>
+        </el-table-column>
+
+        <el-table-column label="提单人" width="112">
+          <template #default="{ row }">
+            <span class="wo-text-2">{{ userName(row.userId) }}</span>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="处理人" width="112">
+          <template #default="{ row }">
+            <span :class="row.handlerId === null ? 'wo-text-3' : 'wo-text-2'">
+              {{ userName(row.handlerId) }}
+            </span>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="创建时间" width="118">
+          <template #default="{ row }">
+            <span class="wo-text-3 wo-num">{{ formatRelative(row.createTime) }}</span>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="操作" width="86" align="right">
+          <!-- el-table 的插槽把 row 声明成 DefaultRow(Record<PropertyKey, any>),
+               不是 WorkOrderVO,所以在调用点断言回来 -->
+          <template #default="{ row }">
+            <el-button text type="primary" @click.stop="openDetail(row as WorkOrderVO)">详情</el-button>
+          </template>
+        </el-table-column>
+
+        <template #empty>
+          <el-empty description="没有符合条件的工单">
+            <el-button v-if="query.status !== null || query.orderType !== null || query.keyword" @click="resetFilters">
+              清除筛选条件
+            </el-button>
+          </el-empty>
+        </template>
+      </el-table>
+
+      <footer class="table-card__foot">
+        <span class="wo-text-3">
+          共 <b class="wo-num">{{ total }}</b> 条
+          <template v-if="query.status !== null">
+            · 已按「{{ getStatusLabel(query.status) }}」筛选
+          </template>
+        </span>
+        <el-pagination
+          v-model:current-page="query.current"
+          v-model:page-size="query.size"
+          :total="total"
+          :page-sizes="[10, 20, 50]"
+          layout="sizes, prev, pager, next, jumper"
+          background
+          @current-change="load"
+          @size-change="search"
+        />
+      </footer>
+    </section>
+  </div>
+</template>
+
+<style scoped lang="scss">
+.wo-list {
+  display: flex;
+  flex-direction: column;
+}
+
+// ===========================================================================
+// 状态条
+// ===========================================================================
+.status-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: var(--wo-space-4);
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px 6px 10px;
+  border: 1px solid var(--wo-hairline);
+  border-radius: 999px;
+  background: var(--wo-surface);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all var(--wo-dur-fast) var(--wo-ease);
+
+  &:hover {
+    border-color: var(--wo-hairline-brand);
+
+    .status-chip__count {
+      background: var(--wo-brand-wash-2);
+      color: var(--wo-brand-hover);
+    }
+  }
+
+  // 选中:淡底 + 主色描边,不用实色填充
+  &.is-active {
+    border-color: var(--wo-brand);
+    background: var(--wo-brand-wash);
+    box-shadow: 0 0 0 2px var(--wo-brand-ring);
+
+    .status-chip__label {
+      color: var(--wo-brand-active);
+      font-weight: 600;
+    }
+
+    .status-chip__count {
+      background: var(--wo-brand);
+      color: #fff;
+    }
+  }
+
+  // 数量为 0 的状态降低存在感,但仍可点
+  &.is-empty {
+    opacity: 0.5;
+  }
+}
+
+.status-chip__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--dot);
+  flex: none;
+}
+
+.status-chip__label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--wo-ink-2);
+  white-space: nowrap;
+}
+
+.status-chip__count {
+  min-width: 20px;
+  height: 18px;
+  padding: 0 6px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--wo-surface-sunken);
+  color: var(--wo-ink-3);
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  transition: all var(--wo-dur-fast) var(--wo-ease);
+}
+
+// ===========================================================================
+// 条件栏
+// ===========================================================================
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  margin-bottom: var(--wo-space-4);
+}
+
+.filters__search {
+  width: 280px;
+
+  @media (max-width: 720px) {
+    width: 100%;
+  }
+}
+
+.filters__select {
+  width: 148px;
+
+  @media (max-width: 720px) {
+    width: calc(50% - 5px);
+  }
+}
+
+// ===========================================================================
+// 表格卡片
+// ===========================================================================
+.table-card {
+  overflow: hidden;
+}
+
+.wo-table {
+  width: 100%;
+
+  :deep(.el-table__row) {
+    cursor: pointer;
+  }
+}
+
+.order-no {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--wo-ink-3);
+  letter-spacing: 0.02em;
+}
+
+.order-title {
+  font-weight: 500;
+  color: var(--wo-ink-1);
+}
+
+.table-card__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--wo-space-4);
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  border-top: 1px solid var(--wo-hairline);
+  background: var(--wo-surface-raised);
+  font-size: 13px;
+
+  b {
+    color: var(--wo-ink-1);
+    font-weight: 700;
+  }
+}
+</style>

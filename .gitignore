@@ -11,30 +11,15 @@ target/
 **/*.rar
 hs_err_pid*
 replay_pid*
-
 # Maven
 **/build/
 **/target/
 **/dependency-reduced-pom.xml
-
 # Gradle
 .gradle/
 **/build/
 !**/src/main/**/build/
 !**/src/test/**/build/
-
-# IDE - IntelliJ IDEA
-.idea/
-*.iml
-*.iws
-*.ipr
-out/
-.apt_generated/
-.classpath
-.project
-.settings/
-.factorypath
-.vscode/
 
 # ============ Python / FastAPI ============
 **/__pycache__/
@@ -65,7 +50,6 @@ dmypy.json
 */.ipynb_checkpoints/
 
 # ============ Vue / Node.js ============
-node_modules/
 **/node_modules/
 **/dist/
 **/dist-ssr/
@@ -73,10 +57,6 @@ node_modules/
 **/.vite/
 **/.cache/
 **/stats.html
-
-# Vue build output
-**/dist/
-**/dist-ssr/
 
 # ============ OS ============
 *.DS_Store
@@ -87,11 +67,17 @@ Thumbs.db
 .DS_Store?
 
 # ============ IDE / Editor ============
-.vscode/
 .idea/
-*.swp
-*.swo
-*~
+*.iml
+*.iws
+*.ipr
+out/
+.apt_generated/
+.classpath
+.project
+.settings/
+.factorypath
+.vscode/
 
 # ============ Environment ============
 .env

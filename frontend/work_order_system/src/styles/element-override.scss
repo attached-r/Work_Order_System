@@ -1,0 +1,467 @@
+// ---------------------------------------------------------------------------
+// Element Plus 组件层微调
+//
+// 思路:不改结构,只改「密度、描边、圆角、状态反馈」四件事。
+// 全局避免重阴影与实色块,层次靠 1px 发丝线和极淡的蓝底拉开。
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// 按钮:去掉默认的厚重感,只留形变与色的克制反馈
+// ---------------------------------------------------------------------------
+.el-button {
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  transition:
+    background-color var(--wo-dur-fast) var(--wo-ease),
+    border-color var(--wo-dur-fast) var(--wo-ease),
+    transform var(--wo-dur-fast) var(--wo-ease),
+    box-shadow var(--wo-dur-fast) var(--wo-ease);
+
+  // 点击时轻微下沉,给一点"按到实物"的手感
+  &:active:not(.is-disabled) {
+    transform: translateY(0.5px);
+  }
+}
+
+.el-button--primary {
+  box-shadow: 0 1px 2px rgba(47, 111, 237, 0.24);
+
+  &:hover:not(.is-disabled) {
+    box-shadow: 0 3px 10px rgba(47, 111, 237, 0.26);
+  }
+}
+
+// 次要按钮:描边而非填充,是页面里的主力按钮形态
+.el-button--default:not(.is-text):not(.is-link) {
+  background: var(--wo-surface);
+  border-color: var(--wo-hairline-strong);
+  color: var(--wo-ink-2);
+
+  &:hover:not(.is-disabled) {
+    background: var(--wo-brand-wash);
+    border-color: var(--wo-hairline-brand);
+    color: var(--wo-brand-hover);
+  }
+}
+
+// 文字按钮不要 hover 时冒出一块灰底
+.el-button.is-text:not(.is-disabled):hover {
+  background: var(--wo-brand-wash);
+  color: var(--wo-brand-hover);
+}
+
+// ---------------------------------------------------------------------------
+// 输入类控件:统一高度、描边与聚焦光晕
+// ---------------------------------------------------------------------------
+.el-input__wrapper,
+.el-textarea__inner,
+.el-select__wrapper {
+  background: var(--wo-surface);
+  box-shadow: 0 0 0 1px var(--wo-hairline-strong) inset;
+  border-radius: var(--wo-radius-sm);
+  transition:
+    box-shadow var(--wo-dur-fast) var(--wo-ease),
+    background-color var(--wo-dur-fast) var(--wo-ease);
+
+  &:hover {
+    box-shadow: 0 0 0 1px var(--wo-ink-4) inset;
+  }
+
+  // 聚焦:一圈 3px 淡蓝光晕,而不是加粗边框
+  &.is-focus,
+  &:focus-within {
+    box-shadow:
+      0 0 0 1px var(--wo-brand) inset,
+      0 0 0 3px var(--wo-brand-ring);
+  }
+}
+
+.el-textarea__inner {
+  padding: 10px 12px;
+  line-height: 1.7;
+}
+
+.el-input__inner::placeholder,
+.el-textarea__inner::placeholder {
+  color: var(--wo-ink-4);
+}
+
+// ---------------------------------------------------------------------------
+// 表单:标签对齐与间距是"整不整洁"的分水岭
+// ---------------------------------------------------------------------------
+.el-form-item__label {
+  color: var(--wo-ink-2);
+  font-weight: 500;
+  padding-right: 16px;
+}
+
+.el-form-item {
+  margin-bottom: 22px;
+}
+
+// 必填星号弱化处理,不要抢视觉
+.el-form-item.is-required:not(.is-no-asterisk) > .el-form-item__label::before {
+  color: var(--wo-st-5-dot);
+  margin-right: 3px;
+}
+
+.el-form-item__error {
+  padding-top: 3px;
+  font-size: 12px;
+  color: var(--wo-st-5-fg);
+}
+
+// ---------------------------------------------------------------------------
+// 表格:去掉竖线与重表头,靠淡蓝表头和行悬浮区分
+// ---------------------------------------------------------------------------
+.el-table {
+  --el-table-border-color: var(--wo-hairline);
+  --el-table-header-bg-color: var(--wo-surface-sunken);
+  --el-table-row-hover-bg-color: var(--wo-brand-wash);
+  --el-table-header-text-color: var(--wo-ink-2);
+  --el-table-text-color: var(--wo-ink-2);
+
+  th.el-table__cell {
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    // 表头小一号 + 字距,把"数据区"和"标签区"在气质上分开
+    color: var(--wo-ink-3);
+    text-transform: none;
+    border-bottom: 1px solid var(--wo-hairline) !important;
+  }
+
+  td.el-table__cell {
+    border-bottom: 1px solid var(--wo-hairline);
+    padding: 12px 0;
+  }
+
+  // 行悬浮时给首列一条主色竖条,是列表里最轻的"你在这里"提示
+  tbody tr:hover > td.el-table__cell:first-child {
+    box-shadow: inset 3px 0 0 var(--wo-brand);
+  }
+
+  &::before,
+  .el-table__inner-wrapper::before {
+    display: none; // 干掉 EP 默认的底部横线
+  }
+
+  // 表头单元格分隔线也不要
+  .el-table__cell.is-leaf {
+    border-right: none !important;
+  }
+}
+
+.el-table--border .el-table__cell {
+  border-right: none;
+}
+
+// ---------------------------------------------------------------------------
+// 分页:轻量化,只留页码与总数
+// ---------------------------------------------------------------------------
+.el-pagination {
+  --el-pagination-button-bg-color: transparent;
+  --el-pagination-hover-color: var(--wo-brand);
+  font-weight: 500;
+
+  .el-pager li {
+    border-radius: var(--wo-radius-sm);
+    transition: all var(--wo-dur-fast) var(--wo-ease);
+
+    &:hover {
+      background: var(--wo-brand-wash);
+      color: var(--wo-brand-hover);
+    }
+
+    &.is-active {
+      background: var(--wo-brand);
+      color: #fff;
+      font-weight: 600;
+    }
+  }
+
+  .btn-prev,
+  .btn-next {
+    border-radius: var(--wo-radius-sm);
+
+    &:hover:not(:disabled) {
+      background: var(--wo-brand-wash);
+      color: var(--wo-brand-hover);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 弹窗 / 抽屉:更大的圆角 + 发丝线分隔头尾
+// ---------------------------------------------------------------------------
+.el-dialog {
+  border-radius: var(--wo-radius-lg);
+  box-shadow: var(--wo-shadow-lg);
+  overflow: hidden;
+
+  .el-dialog__header {
+    margin: 0;
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--wo-hairline);
+  }
+
+  .el-dialog__title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--wo-ink-1);
+    letter-spacing: -0.01em;
+  }
+
+  .el-dialog__headerbtn {
+    top: 14px;
+    right: 12px;
+  }
+
+  .el-dialog__body {
+    padding: 24px;
+    color: var(--wo-ink-2);
+  }
+
+  .el-dialog__footer {
+    padding: 16px 24px 20px;
+    border-top: 1px solid var(--wo-hairline);
+    background: var(--wo-surface-raised);
+  }
+}
+
+.el-drawer {
+  .el-drawer__header {
+    margin: 0;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--wo-hairline);
+    color: var(--wo-ink-1);
+    font-weight: 600;
+  }
+
+  .el-drawer__body {
+    padding: 0;
+  }
+}
+
+// 遮罩:极淡的蓝灰,不是纯黑
+.el-overlay {
+  background-color: rgba(22, 32, 46, 0.32);
+  backdrop-filter: blur(2px);
+}
+
+// ---------------------------------------------------------------------------
+// 下拉菜单 / 气泡:浮层阴影柔和,条目圆角
+// ---------------------------------------------------------------------------
+.el-popper.is-light,
+.el-select__popper,
+.el-dropdown__popper {
+  border-radius: var(--wo-radius);
+  border-color: var(--wo-hairline);
+  box-shadow: var(--wo-shadow-md);
+}
+
+.el-select-dropdown__item {
+  border-radius: var(--wo-radius-sm);
+  margin: 2px 6px;
+  padding: 0 10px;
+
+  &.is-selected {
+    background: var(--wo-brand-wash);
+    color: var(--wo-brand-hover);
+    font-weight: 600;
+  }
+
+  &.is-hovering:not(.is-selected) {
+    background: var(--wo-surface-sunken);
+  }
+}
+
+.el-dropdown-menu__item {
+  border-radius: var(--wo-radius-sm);
+  margin: 2px 6px;
+  padding: 0 10px;
+  font-weight: 500;
+
+  &:not(.is-disabled):hover,
+  &:not(.is-disabled):focus {
+    background: var(--wo-brand-wash);
+    color: var(--wo-brand-hover);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 标签:一律药丸形、无边框、带圆点前缀(圆点由业务组件补)
+// ---------------------------------------------------------------------------
+.el-tag {
+  border: none;
+  border-radius: 999px;
+  font-weight: 500;
+  padding: 0 10px;
+}
+
+// ---------------------------------------------------------------------------
+// 菜单(侧边栏):透明底,选中态用"淡蓝药丸 + 左侧主色竖条"
+// ---------------------------------------------------------------------------
+.el-menu {
+  border-right: none;
+  background: transparent;
+}
+
+.el-menu-item,
+.el-sub-menu__title {
+  height: 42px;
+  line-height: 42px;
+  margin: 2px 8px;
+  padding-left: 12px !important;
+  border-radius: var(--wo-radius-sm);
+  color: var(--wo-ink-2);
+  font-weight: 500;
+  transition:
+    background-color var(--wo-dur-fast) var(--wo-ease),
+    color var(--wo-dur-fast) var(--wo-ease);
+
+  &:hover {
+    background: var(--wo-brand-wash);
+    color: var(--wo-brand-hover);
+  }
+}
+
+.el-menu-item.is-active {
+  position: relative;
+  background: var(--wo-brand-wash);
+  color: var(--wo-brand-active);
+  font-weight: 600;
+
+  // 左侧竖条:比整块实色更含蓄
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 18px;
+    border-radius: 0 3px 3px 0;
+    background: var(--wo-brand);
+  }
+}
+
+// 折叠时子菜单浮层
+.el-menu--popup {
+  padding: 6px;
+  border-radius: var(--wo-radius);
+  box-shadow: var(--wo-shadow-md);
+  border: 1px solid var(--wo-hairline);
+}
+
+// ---------------------------------------------------------------------------
+// 标签页 / 面包屑 / 时间轴 / 描述列表 / 空状态
+// ---------------------------------------------------------------------------
+.el-tabs__item {
+  font-weight: 500;
+  color: var(--wo-ink-3);
+
+  &.is-active {
+    color: var(--wo-brand);
+    font-weight: 600;
+  }
+}
+
+.el-tabs__nav-wrap::after {
+  height: 1px;
+  background: var(--wo-hairline);
+}
+
+.el-breadcrumb__inner,
+.el-breadcrumb__inner a {
+  color: var(--wo-ink-3);
+  font-weight: 500;
+
+  &:hover {
+    color: var(--wo-brand);
+  }
+}
+
+.el-breadcrumb__item:last-child .el-breadcrumb__inner {
+  color: var(--wo-ink-1);
+  font-weight: 600;
+}
+
+.el-descriptions {
+  --el-descriptions-item-bordered-label-background: var(--wo-surface-sunken);
+
+  .el-descriptions__label {
+    color: var(--wo-ink-3);
+    font-weight: 500;
+  }
+
+  .el-descriptions__content {
+    color: var(--wo-ink-1);
+  }
+}
+
+.el-timeline-item__node {
+  background: var(--wo-brand);
+}
+
+.el-timeline-item__tail {
+  border-left-color: var(--wo-hairline-strong);
+}
+
+.el-timeline-item__timestamp {
+  color: var(--wo-ink-3);
+  font-size: 12px;
+}
+
+.el-empty__description p {
+  color: var(--wo-ink-3);
+}
+
+// ---------------------------------------------------------------------------
+// 消息提示 / 通知:统一圆角与轻阴影
+// ---------------------------------------------------------------------------
+.el-message,
+.el-notification {
+  border-radius: var(--wo-radius);
+  border-color: var(--wo-hairline);
+  box-shadow: var(--wo-shadow-md);
+}
+
+// ---------------------------------------------------------------------------
+// 树(角色权限分配):选中态与勾选框配色
+// ---------------------------------------------------------------------------
+.el-tree {
+  --el-tree-node-hover-bg-color: var(--wo-brand-wash);
+  color: var(--wo-ink-2);
+
+  .el-tree-node__content {
+    height: 34px;
+    border-radius: var(--wo-radius-sm);
+    margin-bottom: 1px;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 上传 / 卡片 / 骨架屏
+// ---------------------------------------------------------------------------
+.el-upload-dragger {
+  border: 1px dashed var(--wo-hairline-strong);
+  border-radius: var(--wo-radius);
+  background: var(--wo-surface-raised);
+  transition: all var(--wo-dur-fast) var(--wo-ease);
+
+  &:hover {
+    border-color: var(--wo-brand);
+    background: var(--wo-brand-wash);
+  }
+}
+
+.el-card {
+  border-color: var(--wo-hairline);
+  border-radius: var(--wo-radius);
+  box-shadow: var(--wo-shadow-xs);
+}
+
+.el-skeleton__item {
+  background: var(--wo-surface-sunken);
+}

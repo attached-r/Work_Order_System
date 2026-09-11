@@ -13,6 +13,7 @@ import com.rj.mapper.RoleMapper;
 import com.rj.mapper.UserMapper;
 import com.rj.mapper.UserRoleMapper;
 import com.rj.model.dto.RegisterDTO;
+import com.rj.model.dto.UpdateUserDTO;
 import com.rj.model.pojo.Department;
 import com.rj.model.pojo.Role;
 import com.rj.model.pojo.User;
@@ -290,6 +291,149 @@ public class UserService implements  IUserService {
         log.info("调整部门: userId={}, departmentId={}", userId, departmentId);
     }
 
+    /**
+     * 登出
+     * <p>
+     * 登录态最终由 Redis 中的 token 决定(JWT 只保证签名与过期),所以登出必须删掉
+     * Redis 里的 token,否则旧 token 在 JWT 过期前仍会被拦截器放行;同时清掉鉴权快照缓存。
+     * 当前用户取自 {@link UserContext},未登录时兜底抛 401。
+     *
+     * @throws BusinessException 未登录(401)
+     */
+    @Override
+    public void logout() {
+        Long userId = UserContext.getUserId();
+        // 拦截器已保证登录,此处仅兜底防御脏 ThreadLocal
+        if (userId == null) {
+            throw new BusinessException(ResultCode.UNAUTHORIZED, "未登录");
+        }
+        logoutRemote(userId);
+        log.info("登出: userId={}", userId);
+    }
+
+    /**
+     * 启停用账号
+     * <p>
+     * 仅更新 status;禁用时额外"踢下线"。拦截器只校验 token 与鉴权快照、并不看 status,
+     * 若不清理,被禁用的账号仍可凭旧 token 访问直到过期。
+     * 禁止停用当前登录账号,避免管理员把自己锁死。
+     *
+     * @param userId 目标用户ID
+     * @param status 0禁用 1启用(取值已由 DTO 收口)
+     * @throws BusinessException 用户不存在(404)、停用当前登录账号(400)
+     */
+    @Override
+    public void updateStatus(Long userId, Integer status) {
+        requireUser(userId);
+
+        // 禁止停用自己:一旦停用会连自己的登录态一起被清掉,直接锁死管理入口
+        if (status == 0 && userId.equals(UserContext.getUserId())) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "不能停用当前登录账号");
+        }
+
+        userMapper.updateById(User.builder().id(userId).status(status).build());
+
+        // 禁用即踢下线,让"禁用"立即生效
+        if (status == 0) {
+            logoutRemote(userId);
+        }
+        log.info("修改账号状态: userId={}, status={}", userId, status);
+    }
+
+    /**
+     * 重置密码
+     * <p>
+     * 管理员直接设置新密码,无需原密码;新密码 BCrypt 加密后落库。
+     * 重置后踢下线,强制该用户用新密码重新登录,避免旧会话继续有效。
+     *
+     * @param userId      目标用户ID
+     * @param newPassword 新密码明文(长度由 DTO 校验)
+     * @throws BusinessException 用户不存在(404)
+     */
+    @Override
+    public void resetPassword(Long userId, String newPassword) {
+        requireUser(userId);
+
+        userMapper.updateById(User.builder()
+                .id(userId)
+                .password(passwordUtil.encode(newPassword))
+                .build());
+
+        // 密码已变,旧登录态不再可信 -> 踢下线
+        logoutRemote(userId);
+        log.info("重置密码: userId={}", userId);
+    }
+
+    /**
+     * 删除用户(逻辑删除)
+     * <p>
+     * User 带 @TableLogic,deleteById 实际执行 UPDATE deleted=1,工单等历史数据对 user_id
+     * 的引用不受影响;同时物理删除 user_role 关联,避免残留脏授权;最后踢下线。
+     * 禁止删除当前登录账号。
+     *
+     * @param userId 目标用户ID
+     * @throws BusinessException 用户不存在(404)、删除当前登录账号(400)
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteUser(Long userId) {
+        requireUser(userId);
+
+        // 禁止删除自己,避免管理员把自己删掉导致无人可管
+        if (userId.equals(UserContext.getUserId())) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "不能删除当前登录账号");
+        }
+
+        // 逻辑删除用户本体(保留历史引用)
+        userMapper.deleteById(userId);
+        // 物理删除角色关联:用户已逻辑删除,关联行无保留意义,留着会变成脏授权
+        userRoleMapper.delete(new LambdaQueryWrapper<UserRole>().eq(UserRole::getUserId, userId));
+
+        // 踢下线并清理鉴权缓存
+        logoutRemote(userId);
+        log.info("删除用户: userId={}", userId);
+    }
+
+    /**
+     * 修改用户基本信息(姓名/电话/部门)
+     * <p>
+     * 账号与密码不在此处:账号是唯一登录标识、密码走重置接口。
+     * departmentId 传 null 表示本次不调整(MyBatis-Plus 跳过 null 字段)。
+     * 部门参与鉴权快照(数据范围),仅当部门确实变化时才驱逐缓存。
+     *
+     * @param userId        目标用户ID
+     * @param updateUserDTO 待更新字段
+     * @throws BusinessException 用户不存在(404)、部门不存在(400)
+     */
+    @Override
+    public void updateUser(Long userId, UpdateUserDTO updateUserDTO) {
+        // 查一次实体:既做存在性校验,又用于比较部门是否变化
+        User existing = userMapper.selectById(userId);
+        if (existing == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "用户不存在");
+        }
+
+        Long newDepartmentId = updateUserDTO.getDepartmentId();
+        // 传了部门才校验存在性;null 表示不调整
+        if (newDepartmentId != null && departmentMapper.selectById(newDepartmentId) == null) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "部门不存在");
+        }
+
+        // 只更新传入的业务字段;phone 为 null 时被默认策略跳过(未传即不改)
+        userMapper.updateById(User.builder()
+                .id(userId)
+                .realName(updateUserDTO.getRealName())
+                .phone(updateUserDTO.getPhone())
+                .departmentId(newDepartmentId)
+                .build());
+
+        // 部门是数据范围依据,确实变化时才驱逐缓存,让下次请求重建
+        if (newDepartmentId != null && !newDepartmentId.equals(existing.getDepartmentId())) {
+            authService.evict(userId);
+        }
+        log.info("修改用户信息: userId={}", userId);
+    }
+
     /** 组装 UserVO 的公共字段 */
     private UserVO baseVo(User user) {
         UserVO vo = new UserVO();
@@ -348,6 +492,19 @@ public class UserService implements  IUserService {
         if (userMapper.selectById(userId) == null) {
             throw new BusinessException(ResultCode.NOT_FOUND, "用户不存在");
         }
+    }
+
+    /**
+     * 踢下线:删除 Redis 中的登录 token 与鉴权快照缓存
+     * <p>
+     * 供禁用、重置密码、删除、登出等"登录态必须立即失效"的场景复用。
+     * 注意操作的是被管理的目标用户,而非当前登录用户。
+     */
+    private void logoutRemote(Long userId) {
+        // token 才是真正的登录态凭据:JWT 未过期不代表仍可用
+        stringRedisTemplate.delete(LOGIN_USER_TOKEN_KEY + userId);
+        // 清掉鉴权快照,避免下次请求读到旧的角色/权限
+        authService.evict(userId);
     }
 
 }

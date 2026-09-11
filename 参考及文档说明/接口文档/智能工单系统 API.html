@@ -1,0 +1,3559 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>智能工单系统 API</title>
+  <style>
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;margin:0;padding:0;color:#333;}
+    .wrap{max-width:960px;margin:0 auto;padding:24px;}
+    h1{text-align:center;color:#00ab6d;}
+    .info{background:#f9f9f9;border:1px solid #e8e8e8;border-radius:4px;padding:14px;margin-bottom:20px;}
+    .export-incomplete{background:#fff7e6;border:1px solid #ffd591;border-radius:4px;padding:12px 14px;margin-bottom:20px;color:#873800;}
+    .export-incomplete p{margin:6px 0;}
+    .export-incomplete ul{margin:6px 0 0;padding-left:20px;}
+    code{background:#f5f5f5;padding:1px 4px;border-radius:3px;font-size:12px;}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>智能工单系统 API</h1>
+    <div class="info">
+      <p><strong>版本:</strong> 1.0</p>
+      <p><strong>描述:</strong> 智能工单管理系统接口文档</p>
+    </div>
+    <div class="export-incomplete" role="alert">
+    <strong>OAS 3.1 不完整导出</strong>
+    <p>有 5 个语义问题无法完整表示。</p>
+    <ul><li>PUT /user/{userId}/roles · requestBody · UNREPRESENTABLE_KEYWORD (minItems)</li><li>GET /user/page · response 200 example · SEARCH_BUDGET_EXCEEDED</li><li>GET /permission/tree · response 200 example · SEARCH_BUDGET_EXCEEDED</li><li>GET /workorder/{id} · response 200 example · SEARCH_BUDGET_EXCEEDED</li><li>GET /workorder/page · response 200 example · SEARCH_BUDGET_EXCEEDED</li></ul>
+  </div>
+    
+      <div style="margin-bottom:28px;">
+        <h2 style="border-left:4px solid #00ab6d;padding-left:10px;margin:20px 0 10px;">用户管理</h2>
+        
+        
+    <div style="margin:14px 0;border:1px solid #e8e8e8;border-radius:4px;overflow:hidden;">
+      <div style="padding:8px 12px;background:#fafafa;display:flex;align-items:center;gap:10px;">
+        <span style="background:#fca130;color:#fff;padding:2px 8px;border-radius:3px;font-size:12px;font-weight:600;min-width:56px;text-align:center;">PUT</span>
+        <span style="font-family:monospace;font-size:14px;">/user/{userId}</span>
+        
+      </div>
+      <div style="padding:5px 12px;font-size:14px;">修改用户信息</div>
+      
+      <div style="padding:5px 12px;">
+    <table style="width:100%;border-collapse:collapse;margin:8px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">参数名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">位置</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">userId</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">path</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求参数 <code>userId</code> &nbsp;<span style="font-weight:400;color:#555;">类型: <code>integer / int64</code></span></p>
+        
+        
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求示例: userId</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">0</pre></div>
+      <div style="padding:5px 12px;">
+    <p style="margin:6px 0 2px;font-size:13px;font-weight:600;">请求体 (application/json) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>UpdateUserDTO</code> &nbsp;必填: 是</span></p>
+    
+    
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">realName</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">真实姓名</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">phone</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">联系电话,可空</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">departmentId</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">所属部门ID,可空表示不调整</td>
+    </tr></tbody>
+    </table>
+    
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求示例 (application/json)</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">{
+  &quot;realName&quot;: &quot;&quot;,
+  &quot;phone&quot;: &quot;&quot;,
+  &quot;departmentId&quot;: 0
+}</pre></div>
+      <div style="padding:5px 12px;"><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应结构</p>
+    <table style="width:100%;border-collapse:collapse;margin:4px 0 10px;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:90px;">状态码</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:220px;">Schema</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>200</code></td>
+              <td style="border:1px solid #ddd;padding:5px 8px;">OK</td>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>ResultVoid</code></td>
+            </tr>
+      </tbody>
+    </table>
+        <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应 <code>200</code> (*/*) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>ResultVoid</code></span></p>
+        
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">code</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">message</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">unknown</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">timestamp</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table>
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应示例 <code>200</code> (*/*)</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">{
+  &quot;code&quot;: 0,
+  &quot;message&quot;: &quot;&quot;,
+  &quot;data&quot;: {},
+  &quot;timestamp&quot;: 0
+}</pre></div>
+    </div>
+    <div style="margin:14px 0;border:1px solid #e8e8e8;border-radius:4px;overflow:hidden;">
+      <div style="padding:8px 12px;background:#fafafa;display:flex;align-items:center;gap:10px;">
+        <span style="background:#f93e3e;color:#fff;padding:2px 8px;border-radius:3px;font-size:12px;font-weight:600;min-width:56px;text-align:center;">DELETE</span>
+        <span style="font-family:monospace;font-size:14px;">/user/{userId}</span>
+        
+      </div>
+      <div style="padding:5px 12px;font-size:14px;">删除用户</div>
+      
+      <div style="padding:5px 12px;">
+    <table style="width:100%;border-collapse:collapse;margin:8px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">参数名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">位置</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">userId</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">path</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求参数 <code>userId</code> &nbsp;<span style="font-weight:400;color:#555;">类型: <code>integer / int64</code></span></p>
+        
+        
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求示例: userId</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">0</pre></div>
+      
+      <div style="padding:5px 12px;"><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应结构</p>
+    <table style="width:100%;border-collapse:collapse;margin:4px 0 10px;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:90px;">状态码</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:220px;">Schema</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>200</code></td>
+              <td style="border:1px solid #ddd;padding:5px 8px;">OK</td>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>ResultVoid</code></td>
+            </tr>
+      </tbody>
+    </table>
+        <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应 <code>200</code> (*/*) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>ResultVoid</code></span></p>
+        
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">code</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">message</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">unknown</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">timestamp</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table>
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应示例 <code>200</code> (*/*)</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">{
+  &quot;code&quot;: 0,
+  &quot;message&quot;: &quot;&quot;,
+  &quot;data&quot;: {},
+  &quot;timestamp&quot;: 0
+}</pre></div>
+    </div>
+    <div style="margin:14px 0;border:1px solid #e8e8e8;border-radius:4px;overflow:hidden;">
+      <div style="padding:8px 12px;background:#fafafa;display:flex;align-items:center;gap:10px;">
+        <span style="background:#fca130;color:#fff;padding:2px 8px;border-radius:3px;font-size:12px;font-weight:600;min-width:56px;text-align:center;">PUT</span>
+        <span style="font-family:monospace;font-size:14px;">/user/{userId}/status</span>
+        
+      </div>
+      <div style="padding:5px 12px;font-size:14px;">启停用账号</div>
+      
+      <div style="padding:5px 12px;">
+    <table style="width:100%;border-collapse:collapse;margin:8px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">参数名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">位置</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">userId</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">path</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求参数 <code>userId</code> &nbsp;<span style="font-weight:400;color:#555;">类型: <code>integer / int64</code></span></p>
+        
+        
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求示例: userId</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">0</pre></div>
+      <div style="padding:5px 12px;">
+    <p style="margin:6px 0 2px;font-size:13px;font-weight:600;">请求体 (application/json) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>UpdateUserStatusDTO</code> &nbsp;必填: 是</span></p>
+    
+    
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">status</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">账号状态:0禁用 1启用</td>
+    </tr></tbody>
+    </table>
+    
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求示例 (application/json)</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">{
+  &quot;status&quot;: 0
+}</pre></div>
+      <div style="padding:5px 12px;"><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应结构</p>
+    <table style="width:100%;border-collapse:collapse;margin:4px 0 10px;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:90px;">状态码</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:220px;">Schema</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>200</code></td>
+              <td style="border:1px solid #ddd;padding:5px 8px;">OK</td>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>ResultVoid</code></td>
+            </tr>
+      </tbody>
+    </table>
+        <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应 <code>200</code> (*/*) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>ResultVoid</code></span></p>
+        
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">code</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">message</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">unknown</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">timestamp</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table>
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应示例 <code>200</code> (*/*)</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">{
+  &quot;code&quot;: 0,
+  &quot;message&quot;: &quot;&quot;,
+  &quot;data&quot;: {},
+  &quot;timestamp&quot;: 0
+}</pre></div>
+    </div>
+    <div style="margin:14px 0;border:1px solid #e8e8e8;border-radius:4px;overflow:hidden;">
+      <div style="padding:8px 12px;background:#fafafa;display:flex;align-items:center;gap:10px;">
+        <span style="background:#fca130;color:#fff;padding:2px 8px;border-radius:3px;font-size:12px;font-weight:600;min-width:56px;text-align:center;">PUT</span>
+        <span style="font-family:monospace;font-size:14px;">/user/{userId}/roles</span>
+        
+      </div>
+      <div style="padding:5px 12px;font-size:14px;">分配角色</div>
+      
+      <div style="padding:5px 12px;">
+    <table style="width:100%;border-collapse:collapse;margin:8px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">参数名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">位置</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">userId</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">path</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求参数 <code>userId</code> &nbsp;<span style="font-weight:400;color:#555;">类型: <code>integer / int64</code></span></p>
+        
+        
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求示例: userId</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">0</pre></div>
+      <div style="padding:5px 12px;">
+    <p style="margin:6px 0 2px;font-size:13px;font-weight:600;">请求体 (application/json) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>AssignRoleDTO</code> &nbsp;必填: 是</span></p>
+    
+    
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">roleIds</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64[] (截断)</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">角色ID列表,至少一个</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">roleIds[]</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table>
+    
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求示例 (application/json)</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">{
+  &quot;roleIds&quot;: [
+    0
+  ]
+}</pre></div>
+      <div style="padding:5px 12px;"><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应结构</p>
+    <table style="width:100%;border-collapse:collapse;margin:4px 0 10px;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:90px;">状态码</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:220px;">Schema</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>200</code></td>
+              <td style="border:1px solid #ddd;padding:5px 8px;">OK</td>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>ResultVoid</code></td>
+            </tr>
+      </tbody>
+    </table>
+        <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应 <code>200</code> (*/*) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>ResultVoid</code></span></p>
+        
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">code</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">message</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">unknown</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">timestamp</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table>
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应示例 <code>200</code> (*/*)</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">{
+  &quot;code&quot;: 0,
+  &quot;message&quot;: &quot;&quot;,
+  &quot;data&quot;: {},
+  &quot;timestamp&quot;: 0
+}</pre></div>
+    </div>
+    <div style="margin:14px 0;border:1px solid #e8e8e8;border-radius:4px;overflow:hidden;">
+      <div style="padding:8px 12px;background:#fafafa;display:flex;align-items:center;gap:10px;">
+        <span style="background:#fca130;color:#fff;padding:2px 8px;border-radius:3px;font-size:12px;font-weight:600;min-width:56px;text-align:center;">PUT</span>
+        <span style="font-family:monospace;font-size:14px;">/user/{userId}/password</span>
+        
+      </div>
+      <div style="padding:5px 12px;font-size:14px;">重置密码</div>
+      
+      <div style="padding:5px 12px;">
+    <table style="width:100%;border-collapse:collapse;margin:8px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">参数名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">位置</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">userId</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">path</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求参数 <code>userId</code> &nbsp;<span style="font-weight:400;color:#555;">类型: <code>integer / int64</code></span></p>
+        
+        
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求示例: userId</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">0</pre></div>
+      <div style="padding:5px 12px;">
+    <p style="margin:6px 0 2px;font-size:13px;font-weight:600;">请求体 (application/json) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>ResetPasswordDTO</code> &nbsp;必填: 是</span></p>
+    
+    
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">newPassword</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">新密码</td>
+    </tr></tbody>
+    </table>
+    
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求示例 (application/json)</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">{
+  &quot;newPassword&quot;: &quot;aaaaaa&quot;
+}</pre></div>
+      <div style="padding:5px 12px;"><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应结构</p>
+    <table style="width:100%;border-collapse:collapse;margin:4px 0 10px;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:90px;">状态码</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:220px;">Schema</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>200</code></td>
+              <td style="border:1px solid #ddd;padding:5px 8px;">OK</td>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>ResultVoid</code></td>
+            </tr>
+      </tbody>
+    </table>
+        <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应 <code>200</code> (*/*) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>ResultVoid</code></span></p>
+        
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">code</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">message</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">unknown</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">timestamp</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table>
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应示例 <code>200</code> (*/*)</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">{
+  &quot;code&quot;: 0,
+  &quot;message&quot;: &quot;&quot;,
+  &quot;data&quot;: {},
+  &quot;timestamp&quot;: 0
+}</pre></div>
+    </div>
+    <div style="margin:14px 0;border:1px solid #e8e8e8;border-radius:4px;overflow:hidden;">
+      <div style="padding:8px 12px;background:#fafafa;display:flex;align-items:center;gap:10px;">
+        <span style="background:#fca130;color:#fff;padding:2px 8px;border-radius:3px;font-size:12px;font-weight:600;min-width:56px;text-align:center;">PUT</span>
+        <span style="font-family:monospace;font-size:14px;">/user/{userId}/department</span>
+        
+      </div>
+      <div style="padding:5px 12px;font-size:14px;">调整所属部门</div>
+      
+      <div style="padding:5px 12px;">
+    <table style="width:100%;border-collapse:collapse;margin:8px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">参数名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">位置</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">userId</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">path</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求参数 <code>userId</code> &nbsp;<span style="font-weight:400;color:#555;">类型: <code>integer / int64</code></span></p>
+        
+        
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求示例: userId</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">0</pre></div>
+      <div style="padding:5px 12px;">
+    <p style="margin:6px 0 2px;font-size:13px;font-weight:600;">请求体 (application/json) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>AssignDepartmentDTO</code> &nbsp;必填: 是</span></p>
+    
+    
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">departmentId</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">部门ID</td>
+    </tr></tbody>
+    </table>
+    
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求示例 (application/json)</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">{
+  &quot;departmentId&quot;: 0
+}</pre></div>
+      <div style="padding:5px 12px;"><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应结构</p>
+    <table style="width:100%;border-collapse:collapse;margin:4px 0 10px;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:90px;">状态码</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:220px;">Schema</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>200</code></td>
+              <td style="border:1px solid #ddd;padding:5px 8px;">OK</td>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>ResultVoid</code></td>
+            </tr>
+      </tbody>
+    </table>
+        <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应 <code>200</code> (*/*) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>ResultVoid</code></span></p>
+        
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">code</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">message</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">unknown</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">timestamp</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table>
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应示例 <code>200</code> (*/*)</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">{
+  &quot;code&quot;: 0,
+  &quot;message&quot;: &quot;&quot;,
+  &quot;data&quot;: {},
+  &quot;timestamp&quot;: 0
+}</pre></div>
+    </div>
+    <div style="margin:14px 0;border:1px solid #e8e8e8;border-radius:4px;overflow:hidden;">
+      <div style="padding:8px 12px;background:#fafafa;display:flex;align-items:center;gap:10px;">
+        <span style="background:#49cc90;color:#fff;padding:2px 8px;border-radius:3px;font-size:12px;font-weight:600;min-width:56px;text-align:center;">POST</span>
+        <span style="font-family:monospace;font-size:14px;">/user/register</span>
+        
+      </div>
+      <div style="padding:5px 12px;font-size:14px;">注册</div>
+      
+      
+      <div style="padding:5px 12px;">
+    <p style="margin:6px 0 2px;font-size:13px;font-weight:600;">请求体 (application/json) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>RegisterDTO</code> &nbsp;必填: 是</span></p>
+    
+    
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">username</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">登录账号</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">password</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">密码</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">confirmPassword</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">确认密码,需与密码一致</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">realName</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">真实姓名</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">phone</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">联系电话,可空</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">departmentId</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">所属部门ID,可空</td>
+    </tr></tbody>
+    </table>
+    
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求示例 (application/json)</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">{
+  &quot;username&quot;: &quot;&quot;,
+  &quot;password&quot;: &quot;aaaaaa&quot;,
+  &quot;confirmPassword&quot;: &quot;a&quot;,
+  &quot;realName&quot;: &quot;&quot;,
+  &quot;phone&quot;: &quot;&quot;,
+  &quot;departmentId&quot;: 0
+}</pre></div>
+      <div style="padding:5px 12px;"><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应结构</p>
+    <table style="width:100%;border-collapse:collapse;margin:4px 0 10px;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:90px;">状态码</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:220px;">Schema</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>200</code></td>
+              <td style="border:1px solid #ddd;padding:5px 8px;">OK</td>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>ResultVoid</code></td>
+            </tr>
+      </tbody>
+    </table>
+        <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应 <code>200</code> (*/*) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>ResultVoid</code></span></p>
+        
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">code</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">message</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">unknown</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">timestamp</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table>
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应示例 <code>200</code> (*/*)</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">{
+  &quot;code&quot;: 0,
+  &quot;message&quot;: &quot;&quot;,
+  &quot;data&quot;: {},
+  &quot;timestamp&quot;: 0
+}</pre></div>
+    </div>
+    <div style="margin:14px 0;border:1px solid #e8e8e8;border-radius:4px;overflow:hidden;">
+      <div style="padding:8px 12px;background:#fafafa;display:flex;align-items:center;gap:10px;">
+        <span style="background:#49cc90;color:#fff;padding:2px 8px;border-radius:3px;font-size:12px;font-weight:600;min-width:56px;text-align:center;">POST</span>
+        <span style="font-family:monospace;font-size:14px;">/user/logout</span>
+        
+      </div>
+      <div style="padding:5px 12px;font-size:14px;">登出</div>
+      
+      
+      
+      <div style="padding:5px 12px;"><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应结构</p>
+    <table style="width:100%;border-collapse:collapse;margin:4px 0 10px;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:90px;">状态码</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:220px;">Schema</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>200</code></td>
+              <td style="border:1px solid #ddd;padding:5px 8px;">OK</td>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>ResultVoid</code></td>
+            </tr>
+      </tbody>
+    </table>
+        <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应 <code>200</code> (*/*) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>ResultVoid</code></span></p>
+        
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">code</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">message</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">unknown</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">timestamp</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table>
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应示例 <code>200</code> (*/*)</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">{
+  &quot;code&quot;: 0,
+  &quot;message&quot;: &quot;&quot;,
+  &quot;data&quot;: {},
+  &quot;timestamp&quot;: 0
+}</pre></div>
+    </div>
+    <div style="margin:14px 0;border:1px solid #e8e8e8;border-radius:4px;overflow:hidden;">
+      <div style="padding:8px 12px;background:#fafafa;display:flex;align-items:center;gap:10px;">
+        <span style="background:#49cc90;color:#fff;padding:2px 8px;border-radius:3px;font-size:12px;font-weight:600;min-width:56px;text-align:center;">POST</span>
+        <span style="font-family:monospace;font-size:14px;">/user/login</span>
+        
+      </div>
+      <div style="padding:5px 12px;font-size:14px;">登录</div>
+      
+      
+      <div style="padding:5px 12px;">
+    <p style="margin:6px 0 2px;font-size:13px;font-weight:600;">请求体 (application/json) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>LoginDTO</code> &nbsp;必填: 是</span></p>
+    
+    
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">username</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">账号</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">password</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">密码</td>
+    </tr></tbody>
+    </table>
+    
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求示例 (application/json)</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">{
+  &quot;username&quot;: &quot;a&quot;,
+  &quot;password&quot;: &quot;a&quot;
+}</pre></div>
+      <div style="padding:5px 12px;"><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应结构</p>
+    <table style="width:100%;border-collapse:collapse;margin:4px 0 10px;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:90px;">状态码</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:220px;">Schema</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>200</code></td>
+              <td style="border:1px solid #ddd;padding:5px 8px;">OK</td>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>ResultString</code></td>
+            </tr>
+      </tbody>
+    </table>
+        <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应 <code>200</code> (*/*) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>ResultString</code></span></p>
+        
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">code</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">message</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">timestamp</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table>
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应示例 <code>200</code> (*/*)</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">{
+  &quot;code&quot;: 0,
+  &quot;message&quot;: &quot;&quot;,
+  &quot;data&quot;: &quot;&quot;,
+  &quot;timestamp&quot;: 0
+}</pre></div>
+    </div>
+    <div style="margin:14px 0;border:1px solid #e8e8e8;border-radius:4px;overflow:hidden;">
+      <div style="padding:8px 12px;background:#fafafa;display:flex;align-items:center;gap:10px;">
+        <span style="background:#61affe;color:#fff;padding:2px 8px;border-radius:3px;font-size:12px;font-weight:600;min-width:56px;text-align:center;">GET</span>
+        <span style="font-family:monospace;font-size:14px;">/user/page</span>
+        
+      </div>
+      <div style="padding:5px 12px;font-size:14px;">用户分页列表</div>
+      
+      <div style="padding:5px 12px;">
+    <table style="width:100%;border-collapse:collapse;margin:8px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">参数名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">位置</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">current</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">query</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">size</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">query</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">keyword</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">query</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求参数 <code>current</code> &nbsp;<span style="font-weight:400;color:#555;">类型: <code>integer / int64</code></span></p>
+        
+        
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求示例: current</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">1</pre><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求参数 <code>size</code> &nbsp;<span style="font-weight:400;color:#555;">类型: <code>integer / int64</code></span></p>
+        
+        
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求示例: size</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">10</pre><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求参数 <code>keyword</code> &nbsp;<span style="font-weight:400;color:#555;">类型: <code>string</code></span></p>
+        
+        
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求示例: keyword</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;"></pre></div>
+      
+      <div style="padding:5px 12px;"><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应结构</p>
+    <table style="width:100%;border-collapse:collapse;margin:4px 0 10px;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:90px;">状态码</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:220px;">Schema</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>200</code></td>
+              <td style="border:1px solid #ddd;padding:5px 8px;">OK</td>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>ResultPageResultUserVO</code></td>
+            </tr>
+      </tbody>
+    </table>
+        <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应 <code>200</code> (*/*) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>ResultPageResultUserVO</code></span></p>
+        
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">code</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">message</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">PageResultUserVO</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.records</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">UserVO[]</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.records[]</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">UserVO</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.records[].userId</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">用户id</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.records[].username</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">用户名</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.records[].realName</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">真实姓名</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.records[].departmentId</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">所属部门id</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.records[].departmentName</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">所属部门名称</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.records[].status</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">状态：1启用 0停用</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.records[].roles</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string[]</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">角色标识列表,如 SUBMITTER</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.records[].roles[]</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.records[].perms</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string[]</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">权限码列表,如 workorder:review</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.records[].perms[]</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.total</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.current</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.size</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">timestamp</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table></div>
+    </div>
+    <div style="margin:14px 0;border:1px solid #e8e8e8;border-radius:4px;overflow:hidden;">
+      <div style="padding:8px 12px;background:#fafafa;display:flex;align-items:center;gap:10px;">
+        <span style="background:#61affe;color:#fff;padding:2px 8px;border-radius:3px;font-size:12px;font-weight:600;min-width:56px;text-align:center;">GET</span>
+        <span style="font-family:monospace;font-size:14px;">/user/me</span>
+        
+      </div>
+      <div style="padding:5px 12px;font-size:14px;">当前登录用户信息</div>
+      
+      
+      
+      <div style="padding:5px 12px;"><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应结构</p>
+    <table style="width:100%;border-collapse:collapse;margin:4px 0 10px;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:90px;">状态码</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:220px;">Schema</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>200</code></td>
+              <td style="border:1px solid #ddd;padding:5px 8px;">OK</td>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>ResultUserVO</code></td>
+            </tr>
+      </tbody>
+    </table>
+        <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应 <code>200</code> (*/*) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>ResultUserVO</code></span></p>
+        
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">code</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">message</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">UserVO</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.userId</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">用户id</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.username</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">用户名</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.realName</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">真实姓名</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.departmentId</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">所属部门id</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.departmentName</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">所属部门名称</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.status</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">状态：1启用 0停用</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.roles</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string[]</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">角色标识列表,如 SUBMITTER</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.roles[]</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.perms</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string[]</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">权限码列表,如 workorder:review</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.perms[]</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">timestamp</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table>
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应示例 <code>200</code> (*/*)</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">{
+  &quot;code&quot;: 0,
+  &quot;message&quot;: &quot;&quot;,
+  &quot;data&quot;: {
+    &quot;userId&quot;: 0,
+    &quot;username&quot;: &quot;&quot;,
+    &quot;realName&quot;: &quot;&quot;,
+    &quot;departmentId&quot;: 0,
+    &quot;departmentName&quot;: &quot;&quot;,
+    &quot;status&quot;: 0,
+    &quot;roles&quot;: [],
+    &quot;perms&quot;: []
+  },
+  &quot;timestamp&quot;: 0
+}</pre></div>
+    </div>
+      </div>
+      <div style="margin-bottom:28px;">
+        <h2 style="border-left:4px solid #00ab6d;padding-left:10px;margin:20px 0 10px;">角色管理</h2>
+        
+        
+    <div style="margin:14px 0;border:1px solid #e8e8e8;border-radius:4px;overflow:hidden;">
+      <div style="padding:8px 12px;background:#fafafa;display:flex;align-items:center;gap:10px;">
+        <span style="background:#fca130;color:#fff;padding:2px 8px;border-radius:3px;font-size:12px;font-weight:600;min-width:56px;text-align:center;">PUT</span>
+        <span style="font-family:monospace;font-size:14px;">/role/{roleId}/permissions</span>
+        
+      </div>
+      <div style="padding:5px 12px;font-size:14px;">分配权限</div>
+      
+      <div style="padding:5px 12px;">
+    <table style="width:100%;border-collapse:collapse;margin:8px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">参数名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">位置</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">roleId</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">path</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求参数 <code>roleId</code> &nbsp;<span style="font-weight:400;color:#555;">类型: <code>integer / int64</code></span></p>
+        
+        
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求示例: roleId</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">0</pre></div>
+      <div style="padding:5px 12px;">
+    <p style="margin:6px 0 2px;font-size:13px;font-weight:600;">请求体 (application/json) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>AssignPermissionDTO</code> &nbsp;必填: 是</span></p>
+    
+    
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">permissionIds</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64[]</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">权限ID列表,可为空列表表示清空</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">permissionIds[]</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table>
+    
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求示例 (application/json)</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">{
+  &quot;permissionIds&quot;: []
+}</pre></div>
+      <div style="padding:5px 12px;"><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应结构</p>
+    <table style="width:100%;border-collapse:collapse;margin:4px 0 10px;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:90px;">状态码</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:220px;">Schema</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>200</code></td>
+              <td style="border:1px solid #ddd;padding:5px 8px;">OK</td>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>ResultVoid</code></td>
+            </tr>
+      </tbody>
+    </table>
+        <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应 <code>200</code> (*/*) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>ResultVoid</code></span></p>
+        
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">code</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">message</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">unknown</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">timestamp</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table>
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应示例 <code>200</code> (*/*)</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">{
+  &quot;code&quot;: 0,
+  &quot;message&quot;: &quot;&quot;,
+  &quot;data&quot;: {},
+  &quot;timestamp&quot;: 0
+}</pre></div>
+    </div>
+    <div style="margin:14px 0;border:1px solid #e8e8e8;border-radius:4px;overflow:hidden;">
+      <div style="padding:8px 12px;background:#fafafa;display:flex;align-items:center;gap:10px;">
+        <span style="background:#61affe;color:#fff;padding:2px 8px;border-radius:3px;font-size:12px;font-weight:600;min-width:56px;text-align:center;">GET</span>
+        <span style="font-family:monospace;font-size:14px;">/role/list</span>
+        
+      </div>
+      <div style="padding:5px 12px;font-size:14px;">角色列表</div>
+      
+      
+      
+      <div style="padding:5px 12px;"><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应结构</p>
+    <table style="width:100%;border-collapse:collapse;margin:4px 0 10px;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:90px;">状态码</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:220px;">Schema</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>200</code></td>
+              <td style="border:1px solid #ddd;padding:5px 8px;">OK</td>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>ResultListRole</code></td>
+            </tr>
+      </tbody>
+    </table>
+        <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应 <code>200</code> (*/*) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>ResultListRole</code></span></p>
+        
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">code</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">message</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">Role[]</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data[]</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">Role</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">角色实体</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data[].id</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">主键</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data[].roleCode</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">角色标识:SUBMITTER/REVIEWER/DISPATCHER/HANDLER/ADMIN(代码判断用)</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data[].roleName</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">角色名称:提单人/审核人/派单人/处理人/管理员(展示用)</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data[].remark</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">职责说明</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data[].createTime</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string / date-time</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">创建时间</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">timestamp</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table>
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应示例 <code>200</code> (*/*)</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">{
+  &quot;code&quot;: 0,
+  &quot;message&quot;: &quot;&quot;,
+  &quot;data&quot;: [],
+  &quot;timestamp&quot;: 0
+}</pre></div>
+    </div>
+      </div>
+      <div style="margin-bottom:28px;">
+        <h2 style="border-left:4px solid #00ab6d;padding-left:10px;margin:20px 0 10px;">部门管理</h2>
+        
+        
+    <div style="margin:14px 0;border:1px solid #e8e8e8;border-radius:4px;overflow:hidden;">
+      <div style="padding:8px 12px;background:#fafafa;display:flex;align-items:center;gap:10px;">
+        <span style="background:#fca130;color:#fff;padding:2px 8px;border-radius:3px;font-size:12px;font-weight:600;min-width:56px;text-align:center;">PUT</span>
+        <span style="font-family:monospace;font-size:14px;">/department/{id}</span>
+        
+      </div>
+      <div style="padding:5px 12px;font-size:14px;">修改部门</div>
+      
+      <div style="padding:5px 12px;">
+    <table style="width:100%;border-collapse:collapse;margin:8px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">参数名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">位置</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">id</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">path</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求参数 <code>id</code> &nbsp;<span style="font-weight:400;color:#555;">类型: <code>integer / int64</code></span></p>
+        
+        
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求示例: id</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">0</pre></div>
+      <div style="padding:5px 12px;">
+    <p style="margin:6px 0 2px;font-size:13px;font-weight:600;">请求体 (application/json) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>DepartmentDTO</code> &nbsp;必填: 是</span></p>
+    
+    
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">deptCode</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">部门编码(唯一,代码判断用)</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">deptName</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">部门名称</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">remark</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">备注,可空</td>
+    </tr></tbody>
+    </table>
+    
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求示例 (application/json)</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">{
+  &quot;deptCode&quot;: &quot;&quot;,
+  &quot;deptName&quot;: &quot;&quot;,
+  &quot;remark&quot;: &quot;&quot;
+}</pre></div>
+      <div style="padding:5px 12px;"><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应结构</p>
+    <table style="width:100%;border-collapse:collapse;margin:4px 0 10px;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:90px;">状态码</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:220px;">Schema</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>200</code></td>
+              <td style="border:1px solid #ddd;padding:5px 8px;">OK</td>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>ResultVoid</code></td>
+            </tr>
+      </tbody>
+    </table>
+        <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应 <code>200</code> (*/*) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>ResultVoid</code></span></p>
+        
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">code</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">message</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">unknown</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">timestamp</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table>
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应示例 <code>200</code> (*/*)</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">{
+  &quot;code&quot;: 0,
+  &quot;message&quot;: &quot;&quot;,
+  &quot;data&quot;: {},
+  &quot;timestamp&quot;: 0
+}</pre></div>
+    </div>
+    <div style="margin:14px 0;border:1px solid #e8e8e8;border-radius:4px;overflow:hidden;">
+      <div style="padding:8px 12px;background:#fafafa;display:flex;align-items:center;gap:10px;">
+        <span style="background:#f93e3e;color:#fff;padding:2px 8px;border-radius:3px;font-size:12px;font-weight:600;min-width:56px;text-align:center;">DELETE</span>
+        <span style="font-family:monospace;font-size:14px;">/department/{id}</span>
+        
+      </div>
+      <div style="padding:5px 12px;font-size:14px;">删除部门</div>
+      
+      <div style="padding:5px 12px;">
+    <table style="width:100%;border-collapse:collapse;margin:8px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">参数名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">位置</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">id</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">path</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求参数 <code>id</code> &nbsp;<span style="font-weight:400;color:#555;">类型: <code>integer / int64</code></span></p>
+        
+        
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求示例: id</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">0</pre></div>
+      
+      <div style="padding:5px 12px;"><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应结构</p>
+    <table style="width:100%;border-collapse:collapse;margin:4px 0 10px;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:90px;">状态码</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:220px;">Schema</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>200</code></td>
+              <td style="border:1px solid #ddd;padding:5px 8px;">OK</td>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>ResultVoid</code></td>
+            </tr>
+      </tbody>
+    </table>
+        <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应 <code>200</code> (*/*) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>ResultVoid</code></span></p>
+        
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">code</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">message</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">unknown</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">timestamp</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table>
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应示例 <code>200</code> (*/*)</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">{
+  &quot;code&quot;: 0,
+  &quot;message&quot;: &quot;&quot;,
+  &quot;data&quot;: {},
+  &quot;timestamp&quot;: 0
+}</pre></div>
+    </div>
+    <div style="margin:14px 0;border:1px solid #e8e8e8;border-radius:4px;overflow:hidden;">
+      <div style="padding:8px 12px;background:#fafafa;display:flex;align-items:center;gap:10px;">
+        <span style="background:#49cc90;color:#fff;padding:2px 8px;border-radius:3px;font-size:12px;font-weight:600;min-width:56px;text-align:center;">POST</span>
+        <span style="font-family:monospace;font-size:14px;">/department</span>
+        
+      </div>
+      <div style="padding:5px 12px;font-size:14px;">新增部门</div>
+      
+      
+      <div style="padding:5px 12px;">
+    <p style="margin:6px 0 2px;font-size:13px;font-weight:600;">请求体 (application/json) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>DepartmentDTO</code> &nbsp;必填: 是</span></p>
+    
+    
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">deptCode</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">部门编码(唯一,代码判断用)</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">deptName</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">部门名称</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">remark</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">备注,可空</td>
+    </tr></tbody>
+    </table>
+    
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求示例 (application/json)</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">{
+  &quot;deptCode&quot;: &quot;&quot;,
+  &quot;deptName&quot;: &quot;&quot;,
+  &quot;remark&quot;: &quot;&quot;
+}</pre></div>
+      <div style="padding:5px 12px;"><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应结构</p>
+    <table style="width:100%;border-collapse:collapse;margin:4px 0 10px;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:90px;">状态码</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:220px;">Schema</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>200</code></td>
+              <td style="border:1px solid #ddd;padding:5px 8px;">OK</td>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>ResultVoid</code></td>
+            </tr>
+      </tbody>
+    </table>
+        <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应 <code>200</code> (*/*) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>ResultVoid</code></span></p>
+        
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">code</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">message</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">unknown</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">timestamp</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table>
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应示例 <code>200</code> (*/*)</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">{
+  &quot;code&quot;: 0,
+  &quot;message&quot;: &quot;&quot;,
+  &quot;data&quot;: {},
+  &quot;timestamp&quot;: 0
+}</pre></div>
+    </div>
+    <div style="margin:14px 0;border:1px solid #e8e8e8;border-radius:4px;overflow:hidden;">
+      <div style="padding:8px 12px;background:#fafafa;display:flex;align-items:center;gap:10px;">
+        <span style="background:#61affe;color:#fff;padding:2px 8px;border-radius:3px;font-size:12px;font-weight:600;min-width:56px;text-align:center;">GET</span>
+        <span style="font-family:monospace;font-size:14px;">/department/list</span>
+        
+      </div>
+      <div style="padding:5px 12px;font-size:14px;">部门列表</div>
+      
+      
+      
+      <div style="padding:5px 12px;"><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应结构</p>
+    <table style="width:100%;border-collapse:collapse;margin:4px 0 10px;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:90px;">状态码</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:220px;">Schema</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>200</code></td>
+              <td style="border:1px solid #ddd;padding:5px 8px;">OK</td>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>ResultListDepartment</code></td>
+            </tr>
+      </tbody>
+    </table>
+        <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应 <code>200</code> (*/*) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>ResultListDepartment</code></span></p>
+        
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">code</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">message</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">Department[]</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data[]</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">Department</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">部门实体</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data[].id</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">主键</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data[].deptCode</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">部门编码(唯一,代码判断用)</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data[].deptName</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">部门名称</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data[].remark</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">备注</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data[].createTime</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string / date-time</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">创建时间</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">timestamp</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table>
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应示例 <code>200</code> (*/*)</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">{
+  &quot;code&quot;: 0,
+  &quot;message&quot;: &quot;&quot;,
+  &quot;data&quot;: [],
+  &quot;timestamp&quot;: 0
+}</pre></div>
+    </div>
+      </div>
+      <div style="margin-bottom:28px;">
+        <h2 style="border-left:4px solid #00ab6d;padding-left:10px;margin:20px 0 10px;">工单管理</h2>
+        
+        
+    <div style="margin:14px 0;border:1px solid #e8e8e8;border-radius:4px;overflow:hidden;">
+      <div style="padding:8px 12px;background:#fafafa;display:flex;align-items:center;gap:10px;">
+        <span style="background:#49cc90;color:#fff;padding:2px 8px;border-radius:3px;font-size:12px;font-weight:600;min-width:56px;text-align:center;">POST</span>
+        <span style="font-family:monospace;font-size:14px;">/workorder</span>
+        
+      </div>
+      <div style="padding:5px 12px;font-size:14px;">创建工单</div>
+      
+      
+      <div style="padding:5px 12px;">
+    <p style="margin:6px 0 2px;font-size:13px;font-weight:600;">请求体 (application/json) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>WorkOrderCreateDTO</code> &nbsp;必填: 是</span></p>
+    
+    
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">title</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">工单标题</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">content</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">工单描述,可空</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">orderType</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">工单类型:1故障报修 2资源申请 3需求变更</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">priority</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">优先级:1高 2中 3低</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">expireTime</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string / date-time</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">超时时间,可空;不传则默认 72 小时后到期</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">resources</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">WorkOrderResourceDTO[]</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">资源明细列表,可空</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">resources[]</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">WorkOrderResourceDTO</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">工单资源明细</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">resources[].resourceType</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">资源类别:服务器/带宽/软件许可 等</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">resources[].resourceName</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">资源名称/规格描述</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">resources[].quantity</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">number</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">数量,必须大于0</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">resources[].unit</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">单位:台/MBps/个 等</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">resources[].remark</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">申请说明,可空</td>
+    </tr></tbody>
+    </table>
+    
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求示例 (application/json)</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">{
+  &quot;title&quot;: &quot;&quot;,
+  &quot;orderType&quot;: 1,
+  &quot;priority&quot;: 1,
+  &quot;content&quot;: &quot;&quot;,
+  &quot;expireTime&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;resources&quot;: []
+}</pre></div>
+      <div style="padding:5px 12px;"><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应结构</p>
+    <table style="width:100%;border-collapse:collapse;margin:4px 0 10px;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:90px;">状态码</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:220px;">Schema</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>200</code></td>
+              <td style="border:1px solid #ddd;padding:5px 8px;">OK</td>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>ResultLong</code></td>
+            </tr>
+      </tbody>
+    </table>
+        <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应 <code>200</code> (*/*) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>ResultLong</code></span></p>
+        
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">code</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">message</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">timestamp</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table>
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应示例 <code>200</code> (*/*)</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">{
+  &quot;code&quot;: 0,
+  &quot;message&quot;: &quot;&quot;,
+  &quot;data&quot;: 0,
+  &quot;timestamp&quot;: 0
+}</pre></div>
+    </div>
+    <div style="margin:14px 0;border:1px solid #e8e8e8;border-radius:4px;overflow:hidden;">
+      <div style="padding:8px 12px;background:#fafafa;display:flex;align-items:center;gap:10px;">
+        <span style="background:#49cc90;color:#fff;padding:2px 8px;border-radius:3px;font-size:12px;font-weight:600;min-width:56px;text-align:center;">POST</span>
+        <span style="font-family:monospace;font-size:14px;">/workorder/{id}/withdraw</span>
+        
+      </div>
+      <div style="padding:5px 12px;font-size:14px;">撤回/取消工单</div>
+      
+      <div style="padding:5px 12px;">
+    <table style="width:100%;border-collapse:collapse;margin:8px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">参数名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">位置</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">id</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">path</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求参数 <code>id</code> &nbsp;<span style="font-weight:400;color:#555;">类型: <code>integer / int64</code></span></p>
+        
+        
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求示例: id</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">0</pre></div>
+      <div style="padding:5px 12px;">
+    <p style="margin:6px 0 2px;font-size:13px;font-weight:600;">请求体 (application/json) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>WithdrawDTO</code> &nbsp;必填: 是</span></p>
+    
+    
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">remark</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">撤回/取消原因,可空</td>
+    </tr></tbody>
+    </table>
+    
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求示例 (application/json)</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">{
+  &quot;remark&quot;: &quot;&quot;
+}</pre></div>
+      <div style="padding:5px 12px;"><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应结构</p>
+    <table style="width:100%;border-collapse:collapse;margin:4px 0 10px;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:90px;">状态码</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:220px;">Schema</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>200</code></td>
+              <td style="border:1px solid #ddd;padding:5px 8px;">OK</td>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>ResultVoid</code></td>
+            </tr>
+      </tbody>
+    </table>
+        <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应 <code>200</code> (*/*) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>ResultVoid</code></span></p>
+        
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">code</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">message</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">unknown</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">timestamp</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table>
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应示例 <code>200</code> (*/*)</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">{
+  &quot;code&quot;: 0,
+  &quot;message&quot;: &quot;&quot;,
+  &quot;data&quot;: {},
+  &quot;timestamp&quot;: 0
+}</pre></div>
+    </div>
+    <div style="margin:14px 0;border:1px solid #e8e8e8;border-radius:4px;overflow:hidden;">
+      <div style="padding:8px 12px;background:#fafafa;display:flex;align-items:center;gap:10px;">
+        <span style="background:#49cc90;color:#fff;padding:2px 8px;border-radius:3px;font-size:12px;font-weight:600;min-width:56px;text-align:center;">POST</span>
+        <span style="font-family:monospace;font-size:14px;">/workorder/{id}/review</span>
+        
+      </div>
+      <div style="padding:5px 12px;font-size:14px;">审核工单</div>
+      
+      <div style="padding:5px 12px;">
+    <table style="width:100%;border-collapse:collapse;margin:8px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">参数名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">位置</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">id</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">path</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求参数 <code>id</code> &nbsp;<span style="font-weight:400;color:#555;">类型: <code>integer / int64</code></span></p>
+        
+        
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求示例: id</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">0</pre></div>
+      <div style="padding:5px 12px;">
+    <p style="margin:6px 0 2px;font-size:13px;font-weight:600;">请求体 (application/json) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>ReviewDTO</code> &nbsp;必填: 是</span></p>
+    
+    
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">approved</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">boolean</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是否通过:true 通过(→待派单) false 驳回(→已驳回)</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">remark</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">审核意见/驳回原因,可空</td>
+    </tr></tbody>
+    </table>
+    
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求示例 (application/json)</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">{
+  &quot;approved&quot;: true,
+  &quot;remark&quot;: &quot;&quot;
+}</pre></div>
+      <div style="padding:5px 12px;"><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应结构</p>
+    <table style="width:100%;border-collapse:collapse;margin:4px 0 10px;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:90px;">状态码</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:220px;">Schema</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>200</code></td>
+              <td style="border:1px solid #ddd;padding:5px 8px;">OK</td>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>ResultVoid</code></td>
+            </tr>
+      </tbody>
+    </table>
+        <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应 <code>200</code> (*/*) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>ResultVoid</code></span></p>
+        
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">code</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">message</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">unknown</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">timestamp</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table>
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应示例 <code>200</code> (*/*)</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">{
+  &quot;code&quot;: 0,
+  &quot;message&quot;: &quot;&quot;,
+  &quot;data&quot;: {},
+  &quot;timestamp&quot;: 0
+}</pre></div>
+    </div>
+    <div style="margin:14px 0;border:1px solid #e8e8e8;border-radius:4px;overflow:hidden;">
+      <div style="padding:8px 12px;background:#fafafa;display:flex;align-items:center;gap:10px;">
+        <span style="background:#49cc90;color:#fff;padding:2px 8px;border-radius:3px;font-size:12px;font-weight:600;min-width:56px;text-align:center;">POST</span>
+        <span style="font-family:monospace;font-size:14px;">/workorder/{id}/resubmit</span>
+        
+      </div>
+      <div style="padding:5px 12px;font-size:14px;">重新提交工单</div>
+      
+      <div style="padding:5px 12px;">
+    <table style="width:100%;border-collapse:collapse;margin:8px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">参数名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">位置</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">id</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">path</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求参数 <code>id</code> &nbsp;<span style="font-weight:400;color:#555;">类型: <code>integer / int64</code></span></p>
+        
+        
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求示例: id</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">0</pre></div>
+      <div style="padding:5px 12px;">
+    <p style="margin:6px 0 2px;font-size:13px;font-weight:600;">请求体 (application/json) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>WorkOrderCreateDTO</code> &nbsp;必填: 是</span></p>
+    
+    
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">title</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">工单标题</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">content</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">工单描述,可空</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">orderType</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">工单类型:1故障报修 2资源申请 3需求变更</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">priority</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">优先级:1高 2中 3低</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">expireTime</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string / date-time</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">超时时间,可空;不传则默认 72 小时后到期</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">resources</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">WorkOrderResourceDTO[]</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">资源明细列表,可空</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">resources[]</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">WorkOrderResourceDTO</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">工单资源明细</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">resources[].resourceType</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">资源类别:服务器/带宽/软件许可 等</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">resources[].resourceName</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">资源名称/规格描述</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">resources[].quantity</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">number</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">数量,必须大于0</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">resources[].unit</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">单位:台/MBps/个 等</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">resources[].remark</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">申请说明,可空</td>
+    </tr></tbody>
+    </table>
+    
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求示例 (application/json)</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">{
+  &quot;title&quot;: &quot;&quot;,
+  &quot;orderType&quot;: 1,
+  &quot;priority&quot;: 1,
+  &quot;content&quot;: &quot;&quot;,
+  &quot;expireTime&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;resources&quot;: []
+}</pre></div>
+      <div style="padding:5px 12px;"><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应结构</p>
+    <table style="width:100%;border-collapse:collapse;margin:4px 0 10px;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:90px;">状态码</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:220px;">Schema</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>200</code></td>
+              <td style="border:1px solid #ddd;padding:5px 8px;">OK</td>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>ResultVoid</code></td>
+            </tr>
+      </tbody>
+    </table>
+        <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应 <code>200</code> (*/*) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>ResultVoid</code></span></p>
+        
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">code</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">message</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">unknown</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">timestamp</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table>
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应示例 <code>200</code> (*/*)</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">{
+  &quot;code&quot;: 0,
+  &quot;message&quot;: &quot;&quot;,
+  &quot;data&quot;: {},
+  &quot;timestamp&quot;: 0
+}</pre></div>
+    </div>
+    <div style="margin:14px 0;border:1px solid #e8e8e8;border-radius:4px;overflow:hidden;">
+      <div style="padding:8px 12px;background:#fafafa;display:flex;align-items:center;gap:10px;">
+        <span style="background:#49cc90;color:#fff;padding:2px 8px;border-radius:3px;font-size:12px;font-weight:600;min-width:56px;text-align:center;">POST</span>
+        <span style="font-family:monospace;font-size:14px;">/workorder/{id}/process</span>
+        
+      </div>
+      <div style="padding:5px 12px;font-size:14px;">处理完成</div>
+      
+      <div style="padding:5px 12px;">
+    <table style="width:100%;border-collapse:collapse;margin:8px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">参数名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">位置</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">id</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">path</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求参数 <code>id</code> &nbsp;<span style="font-weight:400;color:#555;">类型: <code>integer / int64</code></span></p>
+        
+        
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求示例: id</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">0</pre></div>
+      <div style="padding:5px 12px;">
+    <p style="margin:6px 0 2px;font-size:13px;font-weight:600;">请求体 (application/json) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>ProcessDTO</code> &nbsp;必填: 是</span></p>
+    
+    
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">remark</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">处理结果说明,可空</td>
+    </tr></tbody>
+    </table>
+    
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求示例 (application/json)</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">{
+  &quot;remark&quot;: &quot;&quot;
+}</pre></div>
+      <div style="padding:5px 12px;"><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应结构</p>
+    <table style="width:100%;border-collapse:collapse;margin:4px 0 10px;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:90px;">状态码</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:220px;">Schema</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>200</code></td>
+              <td style="border:1px solid #ddd;padding:5px 8px;">OK</td>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>ResultVoid</code></td>
+            </tr>
+      </tbody>
+    </table>
+        <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应 <code>200</code> (*/*) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>ResultVoid</code></span></p>
+        
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">code</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">message</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">unknown</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">timestamp</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table>
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应示例 <code>200</code> (*/*)</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">{
+  &quot;code&quot;: 0,
+  &quot;message&quot;: &quot;&quot;,
+  &quot;data&quot;: {},
+  &quot;timestamp&quot;: 0
+}</pre></div>
+    </div>
+    <div style="margin:14px 0;border:1px solid #e8e8e8;border-radius:4px;overflow:hidden;">
+      <div style="padding:8px 12px;background:#fafafa;display:flex;align-items:center;gap:10px;">
+        <span style="background:#49cc90;color:#fff;padding:2px 8px;border-radius:3px;font-size:12px;font-weight:600;min-width:56px;text-align:center;">POST</span>
+        <span style="font-family:monospace;font-size:14px;">/workorder/{id}/dispatch</span>
+        
+      </div>
+      <div style="padding:5px 12px;font-size:14px;">派单/转派</div>
+      
+      <div style="padding:5px 12px;">
+    <table style="width:100%;border-collapse:collapse;margin:8px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">参数名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">位置</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">id</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">path</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求参数 <code>id</code> &nbsp;<span style="font-weight:400;color:#555;">类型: <code>integer / int64</code></span></p>
+        
+        
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求示例: id</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">0</pre></div>
+      <div style="padding:5px 12px;">
+    <p style="margin:6px 0 2px;font-size:13px;font-weight:600;">请求体 (application/json) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>DispatchDTO</code> &nbsp;必填: 是</span></p>
+    
+    
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">handlerId</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">目标处理人用户ID</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">remark</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">派单/转派说明,可空</td>
+    </tr></tbody>
+    </table>
+    
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求示例 (application/json)</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">{
+  &quot;handlerId&quot;: 0,
+  &quot;remark&quot;: &quot;&quot;
+}</pre></div>
+      <div style="padding:5px 12px;"><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应结构</p>
+    <table style="width:100%;border-collapse:collapse;margin:4px 0 10px;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:90px;">状态码</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:220px;">Schema</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>200</code></td>
+              <td style="border:1px solid #ddd;padding:5px 8px;">OK</td>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>ResultVoid</code></td>
+            </tr>
+      </tbody>
+    </table>
+        <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应 <code>200</code> (*/*) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>ResultVoid</code></span></p>
+        
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">code</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">message</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">unknown</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">timestamp</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table>
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应示例 <code>200</code> (*/*)</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">{
+  &quot;code&quot;: 0,
+  &quot;message&quot;: &quot;&quot;,
+  &quot;data&quot;: {},
+  &quot;timestamp&quot;: 0
+}</pre></div>
+    </div>
+    <div style="margin:14px 0;border:1px solid #e8e8e8;border-radius:4px;overflow:hidden;">
+      <div style="padding:8px 12px;background:#fafafa;display:flex;align-items:center;gap:10px;">
+        <span style="background:#49cc90;color:#fff;padding:2px 8px;border-radius:3px;font-size:12px;font-weight:600;min-width:56px;text-align:center;">POST</span>
+        <span style="font-family:monospace;font-size:14px;">/workorder/{id}/accept</span>
+        
+      </div>
+      <div style="padding:5px 12px;font-size:14px;">验收工单</div>
+      
+      <div style="padding:5px 12px;">
+    <table style="width:100%;border-collapse:collapse;margin:8px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">参数名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">位置</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">id</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">path</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求参数 <code>id</code> &nbsp;<span style="font-weight:400;color:#555;">类型: <code>integer / int64</code></span></p>
+        
+        
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求示例: id</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">0</pre></div>
+      <div style="padding:5px 12px;">
+    <p style="margin:6px 0 2px;font-size:13px;font-weight:600;">请求体 (application/json) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>AcceptDTO</code> &nbsp;必填: 是</span></p>
+    
+    
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">approved</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">boolean</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是否通过:true 通过(→已完成) false 退回(→处理中)</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">remark</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">验收意见/退回原因,可空</td>
+    </tr></tbody>
+    </table>
+    
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求示例 (application/json)</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">{
+  &quot;approved&quot;: true,
+  &quot;remark&quot;: &quot;&quot;
+}</pre></div>
+      <div style="padding:5px 12px;"><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应结构</p>
+    <table style="width:100%;border-collapse:collapse;margin:4px 0 10px;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:90px;">状态码</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:220px;">Schema</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>200</code></td>
+              <td style="border:1px solid #ddd;padding:5px 8px;">OK</td>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>ResultVoid</code></td>
+            </tr>
+      </tbody>
+    </table>
+        <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应 <code>200</code> (*/*) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>ResultVoid</code></span></p>
+        
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">code</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">message</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">unknown</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">timestamp</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table>
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应示例 <code>200</code> (*/*)</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">{
+  &quot;code&quot;: 0,
+  &quot;message&quot;: &quot;&quot;,
+  &quot;data&quot;: {},
+  &quot;timestamp&quot;: 0
+}</pre></div>
+    </div>
+    <div style="margin:14px 0;border:1px solid #e8e8e8;border-radius:4px;overflow:hidden;">
+      <div style="padding:8px 12px;background:#fafafa;display:flex;align-items:center;gap:10px;">
+        <span style="background:#61affe;color:#fff;padding:2px 8px;border-radius:3px;font-size:12px;font-weight:600;min-width:56px;text-align:center;">GET</span>
+        <span style="font-family:monospace;font-size:14px;">/workorder/{id}</span>
+        
+      </div>
+      <div style="padding:5px 12px;font-size:14px;">工单详情</div>
+      
+      <div style="padding:5px 12px;">
+    <table style="width:100%;border-collapse:collapse;margin:8px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">参数名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">位置</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">id</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">path</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">是</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求参数 <code>id</code> &nbsp;<span style="font-weight:400;color:#555;">类型: <code>integer / int64</code></span></p>
+        
+        
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求示例: id</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">0</pre></div>
+      
+      <div style="padding:5px 12px;"><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应结构</p>
+    <table style="width:100%;border-collapse:collapse;margin:4px 0 10px;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:90px;">状态码</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:220px;">Schema</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>200</code></td>
+              <td style="border:1px solid #ddd;padding:5px 8px;">OK</td>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>ResultWorkOrderDetailVO</code></td>
+            </tr>
+      </tbody>
+    </table>
+        <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应 <code>200</code> (*/*) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>ResultWorkOrderDetailVO</code></span></p>
+        
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">code</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">message</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">WorkOrderDetailVO</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">工单详情</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.id</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">工单ID</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.orderNo</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">工单编号</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.userId</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">提单人ID</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.departmentId</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">归属部门ID</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.handlerId</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">处理人ID,派单前为空</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.title</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">工单标题</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.content</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">工单描述</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.orderType</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">工单类型:1故障报修 2资源申请 3需求变更</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.priority</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">优先级:1高 2中 3低</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.status</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">状态:0待审核 1待派单 2处理中 3待验收 4已完成 5已驳回 6已取消 7已超时</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.statusDesc</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">状态名称</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.remark</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">备注/驳回原因/关闭说明</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.createTime</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string / date-time</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">创建时间</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.updateTime</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string / date-time</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">更新时间</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.expireTime</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string / date-time</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">超时时间</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.resources</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">WorkOrderResource[]</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">资源明细</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.resources[]</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">WorkOrderResource</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">工单资源明细实体</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.resources[].id</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">主键</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.resources[].orderId</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">所属工单ID</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.resources[].resourceType</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">资源类别:服务器/带宽/软件许可 等</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.resources[].resourceName</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">资源名称/规格描述</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.resources[].quantity</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">number</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">数量</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.resources[].unit</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">单位:台/MBps/个 等</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.resources[].remark</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">申请说明,可空</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.resources[].createTime</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string / date-time</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">创建时间</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.logs</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">WorkOrderOperateLog[]</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">操作日志(按时间升序)</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.logs[]</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">WorkOrderOperateLog</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">工单操作日志实体</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.logs[].id</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">主键</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.logs[].orderId</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">工单ID</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.logs[].operatorId</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">操作人ID(user.id)</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.logs[].operateType</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">操作事件:1提交 2审核通过 3审核驳回 4派单 5处理完成 6验收通过 7退回处理 8转派 9撤回/取消 10超时关闭</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.logs[].fromStatus</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">变更前状态(0-7),首次提交为 NULL</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.logs[].toStatus</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">变更后状态(0-7)</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.logs[].toUserId</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">派单/转派目标处理人ID,可空</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.logs[].remark</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">操作备注,可空</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.logs[].createTime</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string / date-time</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">操作时间</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">timestamp</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table></div>
+    </div>
+    <div style="margin:14px 0;border:1px solid #e8e8e8;border-radius:4px;overflow:hidden;">
+      <div style="padding:8px 12px;background:#fafafa;display:flex;align-items:center;gap:10px;">
+        <span style="background:#61affe;color:#fff;padding:2px 8px;border-radius:3px;font-size:12px;font-weight:600;min-width:56px;text-align:center;">GET</span>
+        <span style="font-family:monospace;font-size:14px;">/workorder/page</span>
+        
+      </div>
+      <div style="padding:5px 12px;font-size:14px;">工单分页列表</div>
+      
+      <div style="padding:5px 12px;">
+    <table style="width:100%;border-collapse:collapse;margin:8px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">参数名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">位置</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">current</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">query</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">size</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">query</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">status</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">query</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">orderType</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">query</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">keyword</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">query</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求参数 <code>current</code> &nbsp;<span style="font-weight:400;color:#555;">类型: <code>integer / int64</code></span></p>
+        
+        
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求示例: current</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">1</pre><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求参数 <code>size</code> &nbsp;<span style="font-weight:400;color:#555;">类型: <code>integer / int64</code></span></p>
+        
+        
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求示例: size</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">10</pre><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求参数 <code>status</code> &nbsp;<span style="font-weight:400;color:#555;">类型: <code>integer / int32</code></span></p>
+        
+        
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求示例: status</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">0</pre><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求参数 <code>orderType</code> &nbsp;<span style="font-weight:400;color:#555;">类型: <code>integer / int32</code></span></p>
+        
+        
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求示例: orderType</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;">0</pre><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求参数 <code>keyword</code> &nbsp;<span style="font-weight:400;color:#555;">类型: <code>string</code></span></p>
+        
+        
+    <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">请求示例: keyword</p>
+    <pre style="margin:4px 0;padding:8px;background:#f5f5f5;white-space:pre-wrap;overflow-wrap:anywhere;font-family:monospace;font-size:12px;"></pre></div>
+      
+      <div style="padding:5px 12px;"><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应结构</p>
+    <table style="width:100%;border-collapse:collapse;margin:4px 0 10px;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:90px;">状态码</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:220px;">Schema</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>200</code></td>
+              <td style="border:1px solid #ddd;padding:5px 8px;">OK</td>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>ResultPageResultWorkOrderVO</code></td>
+            </tr>
+      </tbody>
+    </table>
+        <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应 <code>200</code> (*/*) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>ResultPageResultWorkOrderVO</code></span></p>
+        
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">code</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">message</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">PageResultWorkOrderVO</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.records</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">WorkOrderVO[]</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.records[]</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">WorkOrderVO</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">工单列表项</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.records[].id</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">工单ID</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.records[].orderNo</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">工单编号</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.records[].userId</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">提单人ID</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.records[].departmentId</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">归属部门ID</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.records[].handlerId</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">处理人ID,派单前为空</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.records[].title</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">工单标题</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.records[].orderType</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">工单类型:1故障报修 2资源申请 3需求变更</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.records[].priority</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">优先级:1高 2中 3低</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.records[].status</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">状态:0待审核 1待派单 2处理中 3待验收 4已完成 5已驳回 6已取消 7已超时</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.records[].statusDesc</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">状态名称</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.records[].createTime</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string / date-time</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">创建时间</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.records[].updateTime</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string / date-time</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">更新时间</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.records[].expireTime</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string / date-time</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">超时时间</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.total</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.current</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data.size</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">timestamp</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table></div>
+    </div>
+      </div>
+      <div style="margin-bottom:28px;">
+        <h2 style="border-left:4px solid #00ab6d;padding-left:10px;margin:20px 0 10px;">权限管理</h2>
+        
+        
+    <div style="margin:14px 0;border:1px solid #e8e8e8;border-radius:4px;overflow:hidden;">
+      <div style="padding:8px 12px;background:#fafafa;display:flex;align-items:center;gap:10px;">
+        <span style="background:#61affe;color:#fff;padding:2px 8px;border-radius:3px;font-size:12px;font-weight:600;min-width:56px;text-align:center;">GET</span>
+        <span style="font-family:monospace;font-size:14px;">/permission/tree</span>
+        
+      </div>
+      <div style="padding:5px 12px;font-size:14px;">权限树</div>
+      
+      
+      
+      <div style="padding:5px 12px;"><p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应结构</p>
+    <table style="width:100%;border-collapse:collapse;margin:4px 0 10px;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:90px;">状态码</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;width:220px;">Schema</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>200</code></td>
+              <td style="border:1px solid #ddd;padding:5px 8px;">OK</td>
+              <td style="border:1px solid #ddd;padding:5px 8px;"><code>ResultListPermissionVO</code></td>
+            </tr>
+      </tbody>
+    </table>
+        <p style="margin:8px 0 2px;font-size:13px;font-weight:600;">响应 <code>200</code> (*/*) &nbsp;<span style="font-weight:400;color:#555;">类型: <code>ResultListPermissionVO</code></span></p>
+        
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;font-size:13px;">
+      <thead><tr style="background:#f5f5f5;">
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">字段名</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">类型</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">必填</th>
+        <th style="border:1px solid #ddd;padding:5px 8px;text-align:left;">描述</th>
+      </tr></thead>
+      <tbody>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">code</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int32</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">message</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">PermissionVO[]</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data[]</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">PermissionVO</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">权限树节点</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data[].id</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">权限ID</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data[].permCode</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">权限标识:如 workorder:review</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data[].permName</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">string</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">权限名称:如 审核工单</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data[].parentId</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">父权限ID,一级权限为 null</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data[].children</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">PermissionVO[]</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">子权限,无子权限时为空列表</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">data[].children[]</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">循环引用</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ddd;padding:5px 8px;">timestamp</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">integer / int64</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;">否</td>
+      <td style="border:1px solid #ddd;padding:5px 8px;"></td>
+    </tr></tbody>
+    </table></div>
+    </div>
+      </div>
+  </div>
+</body>
+</html>

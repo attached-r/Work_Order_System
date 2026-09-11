@@ -1,0 +1,47 @@
+// ---------------------------------------------------------------------------
+// Element Plus 主题变量覆盖
+//
+// 这个文件只做一件事:把 Element Plus 的 SCSS 变量重写成我们的「淡蓝白」色板。
+// 覆盖后 EP 会自动重新推导 --el-color-primary-light-1..9 与 dark-2,无需手写。
+//
+// 三条硬约束(踩过的坑):
+//   1. 本文件只能有 @forward,不要再 import 它,否则 vite 的 additionalData 会造成自引用循环;
+//   2. $font-family 的默认 key 是空字符串 '',不是 'base'(写 'base' 会静默生成无效变量);
+//   3. 本文件不要掺杂其他样式,它会被注入到每一个 .scss 文件里。
+// ---------------------------------------------------------------------------
+
+@forward 'element-plus/theme-chalk/src/common/var.scss' with (
+  // ---- 主色与语义色:整体降饱和,偏"淡"不刺眼 ----
+  $colors: (
+      'primary': (
+        'base': #2f6fed,
+      ),
+      'success': (
+        'base': #2fa36b,
+      ),
+      'warning': (
+        'base': #d9a31b,
+      ),
+      'danger': (
+        'base': #e04b6a,
+      ),
+      'error': (
+        'base': #e04b6a,
+      ),
+      'info': (
+        'base': #8798ae,
+      ),
+    ),
+
+  // ---- 圆角:比 EP 默认更大,是"柔和克制"的关键 ----
+  $border-radius: (
+      'base': 8px,
+      'small': 6px,
+      'round': 999px,
+    ),
+
+  // ---- 字体:拉丁字母与数字走 Plus Jakarta Sans,中文回落系统黑体 ----
+  $font-family: (
+      '': "'Plus Jakarta Sans Variable', 'PingFang SC', 'HarmonyOS Sans SC', 'Microsoft YaHei', 'Source Han Sans SC', -apple-system, sans-serif",
+    )
+);

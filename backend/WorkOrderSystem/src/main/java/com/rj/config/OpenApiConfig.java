@@ -70,5 +70,30 @@ public class OpenApiConfig {
                 .pathsToMatch("/role/**")
                 .build();
     }
+
+    /**
+     * 分组配置：路径匹配
+     * @return 权限信息分组
+     */
+    @Bean
+    public GroupedOpenApi permissionOpenApi(){
+        return GroupedOpenApi.builder()
+                .group("权限信息模块")
+                .pathsToMatch("/permission/**")
+                .build();
+    }
+
+    // workorder
+    /**
+     * 分组配置：路径匹配
+     * @return 权限信息分组
+     */
+    @Bean
+    public GroupedOpenApi workorderOpenApi(){
+        return GroupedOpenApi.builder()
+                .group("工单管理信息模块")
+                .pathsToMatch("/workorder/**")
+                .build();
+    }
     // 诸如上述 需要分组再编写
 }
