@@ -1,9 +1,9 @@
 /**
  * 时间格式化工具
  *
- * 后端 LocalDateTime 的序列化格式尚未最终确定(可能是 ISO 的 `2026-09-11T14:32:10`,
- * 也可能是 `2026-09-11 14:32:10`),所以这里统一做「宽容解析 + 统一输出」,
- * 前端各处只调这几个函数,等接口定下来后只改这一处。
+ * 后端时间字段的格式已确定:Jackson 默认的 ISO-8601,如 `2026-09-11T20:49:23`,
+ * 不带时区(即 LocalDateTime 的字面值)。
+ * 展示一律走这里的函数,往上传则走 {@link toIsoLocal} —— 两端都不自己拼字符串。
  */
 
 /** 把后端的各种时间写法解析成 Date;解析不了返回 null */
@@ -90,8 +90,17 @@ export function formatRemaining(expireTime: string | null | undefined): {
   return { text: `${Math.floor(diff / day)} 天后到期`, tone: 'normal' }
 }
 
-/** 生成相对当前时间偏移若干小时的字符串,供 mock 数据构造使用 */
-export function hoursAgo(hours: number): string {
-  const d = new Date(Date.now() - hours * 3_600_000)
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+/**
+ * 把 Date 转成后端 LocalDateTime 接受的写法:`2026-09-14T20:49:24`。
+ *
+ * ⚠️ 必须是 ISO 的 T 分隔,且不带时区后缀 —— 后端 Jackson 按 ISO-8601 反序列化,
+ * 传 `2026-09-14 20:49:24`(空格)或 `...Z`(UTC)都会 400 或差 8 小时。
+ * 也因此日期选择器不设 value-format,而是绑定 Date 再由这里统一转换,
+ * 免得依赖组件对格式串的处理细节。
+ */
+export function toIsoLocal(value: Date): string {
+  return (
+    `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}` +
+    `T${pad(value.getHours())}:${pad(value.getMinutes())}:${pad(value.getSeconds())}`
+  )
 }

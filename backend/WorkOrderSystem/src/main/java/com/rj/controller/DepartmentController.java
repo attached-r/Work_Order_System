@@ -4,6 +4,7 @@ import com.rj.common.Result;
 import com.rj.common.annotation.RequiresPermission;
 import com.rj.model.dto.DepartmentDTO;
 import com.rj.model.pojo.Department;
+import com.rj.model.vo.DepartmentBriefVO;
 import com.rj.service.IDepartmentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -36,6 +37,18 @@ public class DepartmentController {
     @GetMapping("/list")
     public Result<List<Department>> list() {
         return Result.success(departmentService.listAll());
+    }
+
+    /**
+     * 部门只读目录,把工单里的 departmentId 解析成部门名。
+     * <p>
+     * <b>刻意不挂 {@code @RequiresPermission}:</b>能看工单的角色未必有 {@code user:manage},
+     * 不加注解即"登录即可"(拦截器仍校验 token)。返回不含 remark 的精简字段。
+     */
+    @Operation(summary = "部门目录")
+    @GetMapping("/directory")
+    public Result<List<DepartmentBriefVO>> directory() {
+        return Result.success(departmentService.listDirectory());
     }
 
     /**

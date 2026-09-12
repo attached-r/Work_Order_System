@@ -34,6 +34,19 @@ public class RoleController {
     // 新增角色 由于角色基本上固定的 不需要修改
 
     /**
+     * 查询角色已绑定的权限ID列表,供权限抽屉回显勾选状态。
+     * <p>
+     * 与下面的覆盖式分配接口配对:先读后写,前端才不会在"空勾选"状态下把角色权限清空。
+     * 权限名称由前端用 {@code GET /permission/tree} 的字典自行映射,这里只回ID。
+     */
+    @Operation(summary = "角色已分配权限ID列表")
+    @RequiresPermission("user:manage")
+    @GetMapping("/{roleId}/permissions")
+    public Result<List<Long>> listPermissions(@PathVariable Long roleId) {
+        return Result.success(roleService.listPermissionIds(roleId));
+    }
+
+    /**
      * 覆盖式分配角色权限:以本次提交的权限列表为准,空列表表示回收全部权限。
      */
     @Operation(summary = "分配权限")

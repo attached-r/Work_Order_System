@@ -126,12 +126,28 @@ const router = createRouter({
 
 const APP_TITLE = '智能工单系统'
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   const userStore = useUserStore()
 
   // ---- 1. 登录校验 ----
   if (!to.meta.publicPage && !userStore.isLogged) {
     return { name: 'login', query: { redirect: to.fullPath } }
+  }
+
+  // ---- 1.5 补拉用户信息 ----
+  // 刷新页面后本地只剩 token,权限码要靠 /user/me 恢复。必须在下面的权限校验
+  // 之前完成,否则 hasPerm() 会因为 perms 为空而把用户从每个受保护页面踢回工作台。
+  let profileReady = true
+  if (!to.meta.publicPage && userStore.isLogged) {
+    try {
+      await userStore.ensureLoaded()
+    } catch {
+      // 拿不到用户信息(后端没起 / 登录已失效)。此时 perms 是空的,若继续做
+      // 权限校验会把用户从每个页面踢回工作台,反而掩盖真实错误 ——
+      // 放行,让目标页面自己的接口调用把问题暴露出来。
+      // (登录失效的跳转由请求层统一处理,这里不重复。)
+      profileReady = false
+    }
   }
 
   // ---- 2. 已登录还去登录/注册页,直接送回首页 ----
@@ -140,7 +156,7 @@ router.beforeEach((to) => {
   }
 
   // ---- 3. 权限校验:菜单隐藏了不等于直达也被拦住,这里必须再挡一道 ----
-  if (to.meta.perm && !userStore.hasPerm(to.meta.perm)) {
+  if (profileReady && to.meta.perm && !userStore.hasPerm(to.meta.perm)) {
     return { name: 'dashboard' }
   }
 

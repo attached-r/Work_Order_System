@@ -18,6 +18,7 @@ import com.rj.model.pojo.Department;
 import com.rj.model.pojo.Role;
 import com.rj.model.pojo.User;
 import com.rj.model.pojo.UserRole;
+import com.rj.model.vo.UserBriefVO;
 import com.rj.model.vo.UserVO;
 import com.rj.service.IAuthService;
 import com.rj.service.IUserService;
@@ -181,20 +182,50 @@ public class UserService implements  IUserService {
      * <p>
      * keyword 同时模糊匹配账号与真实姓名;部门名与角色走"批量一次查回 + 内存装配",
      * 而不是逐行查库,避免分页条数越多查询次数越多的 N+1 问题。
+     * <p>
+     * 四个筛选条件都可缺省:部门与状态直接落在 user 表上;角色要先经
+     * user_role → role 反查出用户ID再回主表过滤(用户与角色是多对多,主表没有角色列)。
      *
-     * @param current 页码,从 1 开始
-     * @param size    每页条数
-     * @param keyword 可选关键字,为空则不过滤
+     * @param current      页码,从 1 开始
+     * @param size         每页条数
+     * @param keyword      可选关键字,为空则不过滤
+     * @param departmentId 可选,按所属部门筛选
+     * @param status       可选,按状态筛选:1启用 0停用
+     * @param roleCode     可选,按角色标识筛选,如 HANDLER
      * @return 分页结果(含总条数、当前页、每页条数)
      */
     @Override
-    public PageResult<UserVO> pageUsers(long current, long size, String keyword) {
+    public PageResult<UserVO> pageUsers(long current, long size, String keyword,
+                                       Long departmentId, Integer status, String roleCode) {
         // 组装查询 wrapper,按 id 升序保证分页顺序稳定(否则 MySQL 翻页可能重复或漏行)
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<User>().orderByAsc(User::getId);
         if (StringUtils.hasText(keyword)) {
             // 账号或姓名任一命中即可;用 and(w -> ...) 把 OR 包成一组,
             // 避免 OR 与逻辑删除等其它条件平级导致条件被"或"掉
             wrapper.and(w -> w.like(User::getUsername, keyword).or().like(User::getRealName, keyword));
+        }
+        if (departmentId != null) {
+            wrapper.eq(User::getDepartmentId, departmentId);
+        }
+        if (status != null) {
+            wrapper.eq(User::getStatus, status);
+        }
+        if (StringUtils.hasText(roleCode)) {
+            // 角色码 -> 角色ID -> 用户ID。任何一步查不到都说明"该角色下没有用户",
+            // 直接返回空页;否则空集合塞进 IN 会拼出非法 SQL
+            List<Long> roleIds = roleMapper.selectList(
+                            new LambdaQueryWrapper<Role>().eq(Role::getRoleCode, roleCode))
+                    .stream().map(Role::getId).toList();
+            if (roleIds.isEmpty()) {
+                return new PageResult<>(List.of(), 0, current, size);
+            }
+            List<Long> userIds = userRoleMapper.selectList(
+                            new LambdaQueryWrapper<UserRole>().in(UserRole::getRoleId, roleIds))
+                    .stream().map(UserRole::getUserId).distinct().toList();
+            if (userIds.isEmpty()) {
+                return new PageResult<>(List.of(), 0, current, size);
+            }
+            wrapper.in(User::getId, userIds);
         }
         // 执行分页查询:总数 + 当前页数据(COUNT 与 LIMIT 由分页插件自动拼)
         Page<User> page = userMapper.selectPage(new Page<>(current, size), wrapper);
@@ -207,13 +238,8 @@ public class UserService implements  IUserService {
 
         // 批量装配部门名与角色,避免逐行查库
         List<Long> userIds = users.stream().map(User::getId).toList();
-        // 收集本页涉及的部门ID:过滤 null(ADMIN 等全局账号可能无部门)并去重,缩小 IN 规模
-        List<Long> deptIds = users.stream().map(User::getDepartmentId)
-                .filter(Objects::nonNull).distinct().toList();
-        // 一次 IN 查回 id -> 部门名;没有部门则跳过查询,用空表兜底
-        Map<Long, String> deptNameMap = deptIds.isEmpty() ? Map.<Long, String>of()
-                : departmentMapper.selectList(new LambdaQueryWrapper<Department>().in(Department::getId, deptIds))
-                        .stream().collect(Collectors.toMap(Department::getId, Department::getDeptName));
+        Map<Long, String> deptNameMap = loadDepartmentNames(
+                users.stream().map(User::getDepartmentId).toList());
         Map<Long, List<String>> userRoleMap = loadUserRoleCodes(userIds);
 
         // 内存装配:部门名按 id 取,角色取不到(该用户无角色)兜底成空列表
@@ -225,6 +251,44 @@ public class UserService implements  IUserService {
         }).toList();
 
         return new PageResult<>(records, page.getTotal(), page.getCurrent(), page.getSize());
+    }
+
+    /**
+     * 用户只读目录
+     * <p>
+     * 用途是把工单里的裸 {@code userId} / {@code handlerId} 解析成姓名,并给派单下拉提供
+     * "角色 + 状态"过滤所需的字段,所以只返回 {@link UserBriefVO}(不含权限码)。
+     * 全量查询即可:用户表带 @TableLogic,已逻辑删除的账号会被自动排除。
+     * 部门名与角色沿用与分页相同的"批量查回 + 内存装配",避免逐行查库。
+     *
+     * @return 用户目录,按 id 升序;无用户时返回空列表
+     */
+    @Override
+    public List<UserBriefVO> listDirectory() {
+        // 用户是基础数据、量级可控,直接全查;按 id 升序让前端映射表/下拉顺序稳定
+        List<User> users = userMapper.selectList(new LambdaQueryWrapper<User>().orderByAsc(User::getId));
+        if (users.isEmpty()) {
+            // 提前返回:loadUserRoleCodes 内部要用 IN,空集合会拼出非法 SQL
+            return List.of();
+        }
+
+        Map<Long, String> deptNameMap = loadDepartmentNames(
+                users.stream().map(User::getDepartmentId).toList());
+        Map<Long, List<String>> userRoleMap = loadUserRoleCodes(
+                users.stream().map(User::getId).toList());
+
+        // 内存装配:无部门时部门名置 null,无角色时兜底成空列表(前端仍按 roles 过滤候选人)
+        return users.stream().map(user -> {
+            UserBriefVO vo = new UserBriefVO();
+            vo.setUserId(user.getId());
+            vo.setUsername(user.getUsername());
+            vo.setRealName(user.getRealName());
+            vo.setDepartmentId(user.getDepartmentId());
+            vo.setDepartmentName(user.getDepartmentId() == null ? null : deptNameMap.get(user.getDepartmentId()));
+            vo.setStatus(user.getStatus());
+            vo.setRoles(userRoleMap.getOrDefault(user.getId(), List.of()));
+            return vo;
+        }).toList();
     }
 
     /**
@@ -399,6 +463,7 @@ public class UserService implements  IUserService {
      * <p>
      * 账号与密码不在此处:账号是唯一登录标识、密码走重置接口。
      * departmentId 传 null 表示本次不调整(MyBatis-Plus 跳过 null 字段)。
+     * phone 用 null / 空串区分"不修改"与"清空",见下方实现处注释。
      * 部门参与鉴权快照(数据范围),仅当部门确实变化时才驱逐缓存。
      *
      * @param userId        目标用户ID
@@ -419,11 +484,15 @@ public class UserService implements  IUserService {
             throw new BusinessException(ResultCode.BAD_REQUEST, "部门不存在");
         }
 
-        // 只更新传入的业务字段;phone 为 null 时被默认策略跳过(未传即不改)
+        // phone 语义:null = 不修改(null 会被 MyBatis-Plus 默认策略跳过),空串 = 清空
+        // (空串本身非 null,会正常写库)。统一 trim 是为了不让 "   " 这类空白被当成有效值存进去。
+        String phone = updateUserDTO.getPhone() == null ? null : updateUserDTO.getPhone().trim();
+
+        // 只更新传入的业务字段
         userMapper.updateById(User.builder()
                 .id(userId)
                 .realName(updateUserDTO.getRealName())
-                .phone(updateUserDTO.getPhone())
+                .phone(phone)
                 .departmentId(newDepartmentId)
                 .build());
 
@@ -442,7 +511,26 @@ public class UserService implements  IUserService {
         vo.setRealName(user.getRealName());
         vo.setDepartmentId(user.getDepartmentId());
         vo.setStatus(user.getStatus());
+        vo.setPhone(user.getPhone());
         return vo;
+    }
+
+    /**
+     * 批量查询 departmentId -> 部门名称
+     * <p>
+     * 供用户分页与用户目录复用:先过滤 null(ADMIN 等全局账号可能无部门)并去重,缩小 IN 规模;
+     * 一条部门都没有时直接返回空表,连查询都省掉。
+     *
+     * @param departmentIds 待解析的部门ID,允许含 null 与重复值
+     * @return departmentId -> 部门名;查不到的ID不会出现在返回的 Map 中
+     */
+    private Map<Long, String> loadDepartmentNames(List<Long> departmentIds) {
+        List<Long> deptIds = departmentIds.stream().filter(Objects::nonNull).distinct().toList();
+        if (deptIds.isEmpty()) {
+            return Map.of();
+        }
+        return departmentMapper.selectList(new LambdaQueryWrapper<Department>().in(Department::getId, deptIds))
+                .stream().collect(Collectors.toMap(Department::getId, Department::getDeptName));
     }
 
     /** 通过部门id 获取部门名称*/

@@ -10,6 +10,7 @@ import com.rj.model.dto.ReviewDTO;
 import com.rj.model.dto.WithdrawDTO;
 import com.rj.model.dto.WorkOrderCreateDTO;
 import com.rj.model.vo.WorkOrderDetailVO;
+import com.rj.model.vo.WorkOrderStatsVO;
 import com.rj.model.vo.WorkOrderVO;
 import com.rj.service.IWorkOrderService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -62,6 +63,19 @@ public class WorkOrderController {
             @RequestParam(required = false) Integer orderType,
             @RequestParam(required = false) String keyword) {
         return Result.success(workOrderService.page(current, size, status, orderType, keyword));
+    }
+
+    /**
+     * 工单统计:总数与各状态数量,数据范围与列表一致。
+     * 供工作台的指标卡/状态分布与列表页的状态筛选条取数。
+     */
+    @Operation(summary = "工单统计")
+    @RequiresPermission("workorder:query")
+    @GetMapping("/stats")
+    public Result<WorkOrderStatsVO> stats(
+            @RequestParam(required = false) Integer orderType,
+            @RequestParam(required = false) String keyword) {
+        return Result.success(workOrderService.stats(orderType, keyword));
     }
 
     /**

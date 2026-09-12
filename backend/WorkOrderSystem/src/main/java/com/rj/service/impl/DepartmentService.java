@@ -10,6 +10,7 @@ import com.rj.model.dto.DepartmentDTO;
 import com.rj.model.pojo.Department;
 import com.rj.model.pojo.User;
 import com.rj.model.pojo.WorkOrder;
+import com.rj.model.vo.DepartmentBriefVO;
 import com.rj.service.IDepartmentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,6 +39,25 @@ public class DepartmentService implements IDepartmentService {
     public List<Department> listAll() {
         // 部门是字典数据、条数很少,直接全查;按 id 升序保证下拉顺序稳定
         return departmentMapper.selectList(new LambdaQueryWrapper<Department>().orderByAsc(Department::getId));
+    }
+
+    /**
+     * 部门只读目录
+     * <p>
+     * 直接复用 {@link #listAll} 的查询(同一份数据、同一个排序),再裁成精简视图;
+     * 部门表只有几个字段、条数很少,没必要为此另写一条查询。
+     *
+     * @return 部门目录,按 id 升序
+     */
+    @Override
+    public List<DepartmentBriefVO> listDirectory() {
+        return listAll().stream().map(department -> {
+            DepartmentBriefVO vo = new DepartmentBriefVO();
+            vo.setId(department.getId());
+            vo.setDeptCode(department.getDeptCode());
+            vo.setDeptName(department.getDeptName());
+            return vo;
+        }).toList();
     }
 
     /**

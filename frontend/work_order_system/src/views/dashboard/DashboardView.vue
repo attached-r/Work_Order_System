@@ -11,72 +11,78 @@
  */
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 // 裸图标名不会被 resolver 自动解析,必须显式导入
 import { Plus } from '@element-plus/icons-vue'
 import PageHeader from '@/components/PageHeader.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import PriorityTag from '@/components/PriorityTag.vue'
-import { getOrderTypeLabel, getStatusTone } from '@/constants/workorder'
-import { MOCK_WORK_ORDERS, MOCK_USERS, mockStatusDistribution } from '@/mock'
+import { WorkOrderStatus, getOrderTypeLabel, getStatusLabel, getStatusTone } from '@/constants/workorder'
+import { fetchWorkOrderStats, pageWorkOrders } from '@/api'
+import { useUserDirectory } from '@/composables/useDirectories'
 import { formatRelative } from '@/utils/datetime'
 import { useUserStore } from '@/stores/user'
+import type { WorkOrderStats, WorkOrderVO } from '@/types/domain'
 
 const router = useRouter()
 const userStore = useUserStore()
+const { ensure: ensureUsers, nameOf } = useUserDirectory()
 
 const loading = ref(false)
 
-// TODO(api): 换成若干统计接口。当前全部由 mock 在前端聚合。
-const distribution = computed(() => mockStatusDistribution())
-const allOrders = computed(() => MOCK_WORK_ORDERS)
+/** 空对象打底,接口没回来时统计都算 0,模板不用到处判空 */
+const stats = ref<WorkOrderStats>({ total: 0, statusCounts: [] })
 
-const userMap = computed(() => {
-  const m = new Map<number, string>()
-  for (const u of MOCK_USERS) m.set(u.userId, u.realName)
-  return m
-})
+/** 统计口径由后端按当前用户的数据范围收敛,和工单列表完全一致 */
+const distribution = computed(() =>
+  stats.value.statusCounts.map((s) => ({
+    status: s.status,
+    label: getStatusLabel(s.status),
+    count: s.count,
+  })),
+)
 
-function userName(id: number | null): string {
-  if (id === null) return '未分配'
-  return userMap.value.get(id) ?? `用户 ${id}`
+function countOf(status: number): number {
+  return stats.value.statusCounts.find((s) => s.status === status)?.count ?? 0
 }
 
 // ---------------------------------------------------------------------------
 // 指标卡
 // ---------------------------------------------------------------------------
-const metrics = computed(() => {
-  const list = allOrders.value
-  return [
-    {
-      key: 'total',
-      label: '工单总数',
-      value: list.length,
-      hint: '当前可见范围内',
-      tone: 'brand',
-    },
-    {
-      key: 'active',
-      label: '进行中',
-      value: list.filter((o) => [0, 1, 2, 3].includes(o.status)).length,
-      hint: '待审核 / 待派单 / 处理中 / 待验收',
-      tone: 'plain',
-    },
-    {
-      key: 'timeout',
-      label: '已超时',
-      value: list.filter((o) => o.status === 7).length,
-      hint: '需要尽快跟进',
-      tone: 'danger',
-    },
-    {
-      key: 'done',
-      label: '已完成',
-      value: list.filter((o) => o.status === 4).length,
-      hint: '累计闭环',
-      tone: 'success',
-    },
-  ]
-})
+const metrics = computed(() => [
+  {
+    key: 'total',
+    label: '工单总数',
+    value: stats.value.total,
+    hint: '当前可见范围内',
+    tone: 'brand',
+  },
+  {
+    key: 'active',
+    label: '进行中',
+    value:
+      countOf(WorkOrderStatus.PENDING_REVIEW) +
+      countOf(WorkOrderStatus.PENDING_DISPATCH) +
+      countOf(WorkOrderStatus.PROCESSING) +
+      countOf(WorkOrderStatus.PENDING_ACCEPT),
+    hint: '待审核 / 待派单 / 处理中 / 待验收',
+    tone: 'plain',
+  },
+  {
+    key: 'timeout',
+    label: '已超时',
+    value: countOf(WorkOrderStatus.TIMEOUT),
+    hint: '需要尽快跟进',
+    tone: 'danger',
+  },
+  {
+    key: 'done',
+    label: '已完成',
+    value: countOf(WorkOrderStatus.COMPLETED),
+    hint: '累计闭环',
+    tone: 'success',
+  },
+])
 
 // ---------------------------------------------------------------------------
 // 环形图:手工算弧长
@@ -112,27 +118,54 @@ const donutSegments = computed(() => {
 })
 
 const doneRate = computed(() => {
-  const total = allOrders.value.length
+  const total = stats.value.total
   if (total === 0) return 0
-  return Math.round((allOrders.value.filter((o) => o.status === 4).length / total) * 100)
+  return Math.round((countOf(WorkOrderStatus.COMPLETED) / total) * 100)
 })
 
 // ---------------------------------------------------------------------------
-// 待我处理:按当前用户的权限角色推断
+// 待我处理:按当前用户的权限推断
 // ---------------------------------------------------------------------------
-const myTasks = computed(() => {
+const TASK_LIMIT = 6
+
+/** 我这类权限对应哪些状态,按流转顺序排 */
+const myStatuses = computed(() => {
   const perms = userStore.perms
-  return allOrders.value
-    .filter((o) => {
-      if (perms.includes('user:manage')) return true // 管理员看到全部进行中的
-      if (o.status === 0 && perms.includes('workorder:review')) return true
-      if (o.status === 1 && perms.includes('workorder:dispatch')) return true
-      if (o.status === 2 && perms.includes('workorder:process')) return true
-      if (o.status === 3 && perms.includes('workorder:accept')) return true
-      return false
-    })
-    .slice(0, 6)
+  const list: number[] = []
+  if (perms.includes('workorder:review')) list.push(WorkOrderStatus.PENDING_REVIEW)
+  if (perms.includes('workorder:dispatch')) list.push(WorkOrderStatus.PENDING_DISPATCH)
+  if (perms.includes('workorder:process')) list.push(WorkOrderStatus.PROCESSING)
+  if (perms.includes('workorder:accept')) list.push(WorkOrderStatus.PENDING_ACCEPT)
+  return list
 })
+
+const myTasks = ref<WorkOrderVO[]>([])
+
+async function loadTasks() {
+  // 管理员是"全部工单"的视角,没有单一待办状态,直接取最新一批
+  if (userStore.hasPerm('user:manage')) {
+    const res = await pageWorkOrders({ current: 1, size: TASK_LIMIT })
+    myTasks.value = res.records
+    return
+  }
+
+  const statuses = myStatuses.value
+  if (statuses.length === 0) {
+    myTasks.value = []
+    return
+  }
+
+  // 一个状态一个请求:接口的 status 只收单值,而用户可能同时是审核人和派单人。
+  // 只查最早那个阶段会让派单待办永远看不见,所以这里并发查全部,再在本地合并。
+  const pages = await Promise.all(
+    statuses.map((status) => pageWorkOrders({ current: 1, size: TASK_LIMIT, status })),
+  )
+  myTasks.value = pages
+    .flatMap((p) => p.records)
+    // createTime 是 ISO 且补零到秒,字典序即时间序,不必转 Date
+    .sort((a, b) => b.createTime.localeCompare(a.createTime))
+    .slice(0, TASK_LIMIT)
+}
 
 /** 按当前用户角色给出该做什么的提示 */
 const roleHint = computed(() => {
@@ -145,9 +178,20 @@ const roleHint = computed(() => {
   return '你当前没有待处理事项。'
 })
 
-onMounted(() => {
+onMounted(async () => {
   loading.value = true
-  setTimeout(() => (loading.value = false), 180)
+  void ensureUsers()
+  try {
+    // 统计比待办重要,先拿到它;待办失败也不该让整页空白
+    stats.value = await fetchWorkOrderStats()
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '统计数据加载失败')
+  } finally {
+    loading.value = false
+  }
+  await loadTasks().catch(() => {
+    myTasks.value = []
+  })
 })
 
 function openOrder(id: number) {
@@ -190,7 +234,7 @@ function openOrder(id: number) {
       <section class="card wo-card">
         <header class="card__head">
           <h2>状态分布</h2>
-          <span class="wo-text-3">共 {{ allOrders.length }} 条</span>
+          <span class="wo-text-3">共 {{ stats.total }} 条</span>
         </header>
 
         <div class="dist">
@@ -269,7 +313,7 @@ function openOrder(id: number) {
               <span class="tasks__sep" />
               <PriorityTag :priority="o.priority" />
               <span class="tasks__sep" />
-              <span class="wo-text-3">{{ userName(o.userId) }}</span>
+              <span class="wo-text-3">{{ nameOf(o.userId) }}</span>
               <span class="tasks__time wo-text-3">{{ formatRelative(o.createTime) }}</span>
             </div>
           </li>

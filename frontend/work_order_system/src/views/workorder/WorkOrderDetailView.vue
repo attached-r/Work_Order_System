@@ -16,7 +16,6 @@ import { ArrowLeft, InfoFilled, Right } from '@element-plus/icons-vue'
 import StatusTag from '@/components/StatusTag.vue'
 import PriorityTag from '@/components/PriorityTag.vue'
 import {
-  ORDER_TYPE_OPTIONS,
   availableActions,
   getOperateLabel,
   getOrderTypeLabel,
@@ -25,7 +24,15 @@ import {
   isTerminal,
 } from '@/constants/workorder'
 import type { WorkOrderAction } from '@/constants/workorder'
-import { MOCK_USERS, mockWorkOrderDetail } from '@/mock'
+import {
+  acceptWorkOrder,
+  dispatchWorkOrder,
+  getWorkOrder,
+  processWorkOrder,
+  reviewWorkOrder,
+  withdrawWorkOrder,
+} from '@/api'
+import { useDepartmentDirectory, useUserDirectory } from '@/composables/useDirectories'
 import { formatRemaining, formatTime } from '@/utils/datetime'
 import { useUserStore } from '@/stores/user'
 import type { WorkOrderDetailVO } from '@/types/domain'
@@ -33,6 +40,9 @@ import type { WorkOrderDetailVO } from '@/types/domain'
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
+// 工单只带 userId / handlerId / departmentId,姓名与部门名靠这两份目录补齐
+const { ensure: ensureUsers, nameOf: userNameOf, allUsers } = useUserDirectory()
+const { ensure: ensureDepts, nameOf: deptNameOf } = useDepartmentDirectory()
 
 const loading = ref(false)
 const detail = ref<WorkOrderDetailVO | null>(null)
@@ -45,22 +55,12 @@ const orderId = computed(() => {
   return Number.isFinite(n) ? n : 0
 })
 
-const userMap = computed(() => {
-  const m = new Map<number, string>()
-  for (const u of MOCK_USERS) m.set(u.userId, u.realName)
-  return m
-})
-
+/** 未分配比 "—" 更能说明「还没派单」这件事 */
 function userName(id: number | null): string {
-  if (id === null) return '未分配'
-  return userMap.value.get(id) ?? `用户 ${id}`
+  return id === null ? '未分配' : userNameOf(id)
 }
 
-const deptName = computed(() => {
-  const d = detail.value?.departmentId
-  if (d === null || d === undefined) return '全局'
-  return d === 1 ? '研发部' : d === 2 ? '运维部' : `部门 ${d}`
-})
+const deptName = computed(() => deptNameOf(detail.value?.departmentId))
 
 /** 当前用户在该工单上能做什么 */
 const actions = computed<WorkOrderAction[]>(() => {
@@ -73,18 +73,22 @@ const terminal = computed(() => isTerminal(detail.value?.status))
 
 const remaining = computed(() => formatRemaining(detail.value?.expireTime ?? null))
 
-/** 处理人下拉候选:仅在有权限派单时才查,现在用 mock */
+/**
+ * 处理人候选:启用中的处理人。
+ * 依赖用户目录 —— 该接口登录即可读,所以只有 workorder:dispatch 的派单人
+ * 也能拿到候选;拿不到时列表为空,弹窗里会提示"候选为空",而不是假装能派单。
+ */
 const handlerOptions = computed(() =>
-  MOCK_USERS.filter((u) => u.roles.includes('HANDLER') && u.status === 1),
+  allUsers.value.filter((u) => u.roles.includes('HANDLER') && u.status === 1),
 )
 
-// TODO(api): 换成 GET /workorder/{id}
 async function load() {
   loading.value = true
   try {
-    await new Promise((r) => setTimeout(r, 180))
-    detail.value = mockWorkOrderDetail(orderId.value)
-    if (!detail.value) ElMessage.warning('工单不存在或你没有访问权限')
+    detail.value = await getWorkOrder(orderId.value)
+  } catch (e) {
+    detail.value = null
+    ElMessage.error(e instanceof Error ? e.message : '工单加载失败')
   } finally {
     loading.value = false
   }
@@ -113,7 +117,6 @@ const ACTION_TITLE: Record<ActionKey, string> = {
   accept: '验收工单',
   withdraw: '撤回 / 取消',
   resubmit: '重新提交',
-  edit: '修改工单',
 }
 
 /** 只有这几个动作需要填说明才建议必填,其余可空 */
@@ -153,29 +156,52 @@ async function submitDialog() {
   }
 
   submitting.value = true
+  const id = detail.value.id
+  // 空串统一转成 null,免得后端把 "" 当有效备注存下来
+  const remark = form.remark.trim() || null
   try {
-    // TODO(api): 按 key 分发到对应接口
-    //   review   -> POST /workorder/{id}/review
-    //   dispatch -> POST /workorder/{id}/dispatch
-    //   process  -> POST /workorder/{id}/process
-    //   accept   -> POST /workorder/{id}/accept
-    //   withdraw -> POST /workorder/{id}/withdraw
-    await new Promise((r) => setTimeout(r, 420))
-    ElMessage.success(`「${ACTION_TITLE[key]}」已提交(演示环境未真正落库)`)
+    // 派单与转派共用一个接口:后端按工单当前状态区分要 workorder:dispatch
+    // 还是 workorder:transfer,前端不必分开
+    switch (key) {
+      case 'review':
+        await reviewWorkOrder(id, { approved: form.approved, remark })
+        break
+      case 'dispatch':
+      case 'transfer':
+        await dispatchWorkOrder(id, { handlerId: form.handlerId as number, remark })
+        break
+      case 'process':
+        await processWorkOrder(id, { remark })
+        break
+      case 'accept':
+        await acceptWorkOrder(id, { approved: form.approved, remark })
+        break
+      case 'withdraw':
+        await withdrawWorkOrder(id, { remark })
+        break
+      default:
+        // resubmit 走页面跳转,不会进到这个弹窗
+        return
+    }
+    ElMessage.success(`「${ACTION_TITLE[key]}」已提交`)
     dialogVisible.value = false
     await load()
+  } catch (e) {
+    // 状态机不允许、无权限、已被他人抢先处理等,都靠后端这句话说清楚
+    ElMessage.error(e instanceof Error ? e.message : '操作失败,请稍后重试')
   } finally {
     submitting.value = false
   }
 }
 
-/** 重新提交 / 修改:跳到提单页并带上 id */
+/** 重新提交:跳到提单页并带上 id,由那边回填原内容 */
 function goResubmit() {
   router.push({ name: 'workorder-create', query: { from: String(orderId.value) } })
 }
 
 function onAction(key: ActionKey) {
-  if (key === 'resubmit' || key === 'edit') {
+  // 重新提交要改内容,走页面跳转;其余动作都是确认型,弹窗解决
+  if (key === 'resubmit') {
     goResubmit()
     return
   }
@@ -188,7 +214,12 @@ async function confirmTerminalHint() {
   })
 }
 
-onMounted(load)
+onMounted(() => {
+  void load()
+  // 目录只用于补名字,失败了也不影响工单本身,所以不 await、不阻塞
+  void ensureUsers()
+  void ensureDepts()
+})
 </script>
 
 <template>
@@ -270,6 +301,11 @@ onMounted(load)
               <el-table-column prop="quantity" label="数量" width="80">
                 <template #default="{ row }">
                   <span class="wo-num">{{ row.quantity ?? '—' }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="unit" label="单位" width="80">
+                <template #default="{ row }">
+                  <span class="wo-text-2">{{ row.unit ?? '—' }}</span>
                 </template>
               </el-table-column>
               <el-table-column prop="remark" label="备注" min-width="140">
@@ -410,6 +446,10 @@ onMounted(load)
               <span>{{ u.realName }}</span>
               <span class="opt-sub">{{ u.departmentName ?? '全局' }}</span>
             </el-option>
+            <template #empty>
+              <!-- 目录已登录即可读,所以空列表只可能是"确实没有启用中的处理人" -->
+              <p class="opt-empty wo-text-3">没有可选的处理人</p>
+            </template>
           </el-select>
         </el-form-item>
 
@@ -597,7 +637,7 @@ onMounted(load)
   font-size: 14px;
   line-height: 1.85;
   color: var(--wo-ink-2);
-  // 保留 mock 文本里的换行
+  // 提单人在 textarea 里敲的换行要原样保留
   white-space: pre-wrap;
 }
 
@@ -741,6 +781,12 @@ onMounted(load)
   float: right;
   color: var(--wo-ink-3);
   font-size: 12px;
+}
+
+.opt-empty {
+  padding: 12px 0;
+  text-align: center;
+  font-size: 12.5px;
 }
 
 // ===========================================================================

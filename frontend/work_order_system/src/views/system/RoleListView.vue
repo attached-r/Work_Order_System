@@ -3,70 +3,84 @@
  * 角色权限
  *
  * 布局上做了个取舍:不用表格,改用卡片网格。
- * 原因是角色只有 5 个且基本不变,卡片能把「角色名 + 说明 + 权限数」一次说清,
+ * 原因是角色只有 5 个且基本不变,卡片能把「角色名 + 角色标识 + 说明」一次说清,
  * 比表格更适合这种"少而行宽"的数据。
  *
- * 权限分配用抽屉 + 权限树,比弹窗能容纳更深的层级。
+ * 读写成对:打开抽屉时先 GET /role/{roleId}/permissions 读回已分配的权限 ID,
+ * 再让管理员改,保存走覆盖式的 PUT。**读回来的 id 必须先与权限字典求交集再勾选**,
+ * 见 openPermissionDrawer —— 树控件的 default-checked-keys 只在创建时生效,
+ * 且要是把字典里不存在的 id 塞进去,会出现"勾了但界面上看不到"的幽灵权限。
+ *
+ * 另外权限接口返回的是扁平列表(parent_id 全是 null),分组节点由前端按
+ * permCode 的命名空间补出来,见 groupedTree。
  */
-import { computed, onMounted, ref } from 'vue'
-import { ElMessage, ElTree } from 'element-plus'
+import { computed, nextTick, onMounted, ref } from 'vue'
+import { ElMessage, ElMessageBox, ElTree } from 'element-plus'
 import PageHeader from '@/components/PageHeader.vue'
-import { MOCK_PERMISSION_TREE, MOCK_ROLE_PERM_IDS, MOCK_ROLES } from '@/mock'
+import { assignPermissions, fetchPermissionTree, listRolePermissions, listRoles } from '@/api'
 import type { PermissionVO, Role } from '@/types/domain'
 
 const loading = ref(false)
+const roles = ref<Role[]>([])
+const permissions = ref<PermissionVO[]>([])
 
-/** 角色 id -> 已勾选权限 id,本地维护一份便于看到改动效果 */
-const rolePermIds = ref<Record<number, number[]>>({ ...MOCK_ROLE_PERM_IDS })
-
-/** 权限码 -> 名称,用于卡片上展示"主要权限"摘要 */
-const permNameMap = computed(() => {
-  const m = new Map<number, string>()
-  const walk = (nodes: PermissionVO[]) => {
-    for (const n of nodes) {
-      m.set(n.id, n.permName)
-      walk(n.children)
-    }
-  }
-  walk(MOCK_PERMISSION_TREE)
-  return m
-})
-
-/** 权限总数(不含分组节点) */
-const totalPermCount = computed(() => {
-  let count = 0
-  const walk = (nodes: PermissionVO[]) => {
-    for (const n of nodes) {
-      if (n.children.length === 0) count += 1
-      else walk(n.children)
-    }
-  }
-  walk(MOCK_PERMISSION_TREE)
-  return count
-})
-
-function permCountOf(roleId: number): number {
-  return (rolePermIds.value[roleId] ?? []).length
-}
-
-/** 卡片上展示前 4 个权限名 */
-function topPermsOf(roleId: number): string[] {
-  const ids = rolePermIds.value[roleId] ?? []
-  return ids
-    .map((id) => permNameMap.value.get(id))
-    .filter((n): n is string => Boolean(n))
-    .slice(0, 4)
-}
-
-// TODO(api): 换成 GET /role/list
 async function load() {
   loading.value = true
   try {
-    await new Promise((r) => setTimeout(r, 180))
+    // 两个都是只读接口,并发拉
+    const [roleList, permList] = await Promise.all([listRoles(), fetchPermissionTree()])
+    roles.value = roleList
+    permissions.value = permList
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '角色或权限加载失败')
   } finally {
     loading.value = false
   }
 }
+
+/** 真实权限 id 集合 —— 用来把下面补出来的分组节点挡在提交之外 */
+const realPermIds = computed(() => new Set(permissions.value.map((p) => p.id)))
+
+const totalPermCount = computed(() => permissions.value.length)
+
+/**
+ * 命名空间 -> 分组标题。
+ * permCode 形如 `workorder:review`,取冒号前那段当分组。
+ */
+const GROUP_LABELS: Record<string, string> = {
+  workorder: '工单权限',
+  user: '系统权限',
+}
+
+/**
+ * 把扁平权限列表补成分组树。
+ *
+ * ⚠️ 分组必须「全覆盖」:抽屉里没出现的权限,保存时就会被覆盖掉,
+ * 所以认不出前缀的一律落进「其它」,绝不能因为不认识就丢掉。
+ *
+ * 分组节点用**负数** id:真实权限 id 是自增正整数,不会撞上;
+ * 提交时再按 realPermIds 过滤掉它们,免得把假 id 当成权限 id 发给后端。
+ */
+const groupedTree = computed<PermissionVO[]>(() => {
+  const groups = new Map<string, PermissionVO[]>()
+  for (const p of permissions.value) {
+    const ns = p.permCode.split(':')[0] || '其它'
+    const bucket = groups.get(ns)
+    if (bucket) bucket.push(p)
+    else groups.set(ns, [p])
+  }
+
+  return [...groups.entries()].map(([ns, children], i) => ({
+    id: -(i + 1),
+    permCode: ns,
+    permName: GROUP_LABELS[ns] ?? '其它',
+    parentId: null,
+    children,
+  }))
+})
+
+/** 全部真实权限 id,用于"全选" */
+const allPermIds = computed(() => permissions.value.map((p) => p.id))
 
 // ===========================================================================
 // 权限分配抽屉
@@ -76,29 +90,70 @@ const drawerSubmitting = ref(false)
 const currentRole = ref<Role | null>(null)
 const treeRef = ref<InstanceType<typeof ElTree>>()
 
-/** 树控件的默认勾选值 */
+/** 是否已经读回该角色的权限。false 时树不渲染,避免空树先闪一下 */
+const permLoaded = ref(false)
+
+/**
+ * 树控件的默认勾选值(真实权限 id)。
+ * 只在树创建时生效,所以配合下面的 v-if 让树在数据到位后才挂载。
+ */
 const defaultChecked = ref<number[]>([])
 
-function openPermissionDrawer(role: Role) {
+async function openPermissionDrawer(role: Role) {
   currentRole.value = role
-  defaultChecked.value = [...(rolePermIds.value[role.id] ?? [])]
+  defaultChecked.value = []
+  permLoaded.value = false
   drawerVisible.value = true
+
+  try {
+    const ids = await listRolePermissions(role.id)
+    /*
+     * 与权限字典求交集再勾:后端理论上只回真实 id,但万一种子数据或角色关联
+     * 里留了字典中已不存在的 id,直接塞给树控件会得到一个"看不见的勾选" ——
+     * 保存时它又会被 getCheckedKeys 带回来,管理员看到的和提交的对不上。
+     * 过滤掉之后,界面所见即提交所得。
+     */
+    defaultChecked.value = ids.filter((id) => realPermIds.value.has(id))
+    permLoaded.value = true
+    // 等 v-if 的树挂载出来,再让它按 defaultChecked 自己勾上
+    await nextTick()
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '读取角色权限失败')
+    drawerVisible.value = false
+  }
 }
 
 async function submitPermissions() {
-  if (!currentRole.value || !treeRef.value) return
+  const role = currentRole.value
+  if (!role || !treeRef.value) return
 
-  // 勾选态需要合并「全选」与「半选」:半选的父节点本身是被引用的分组,也要存下来
+  // 勾选态需要合并「全选」与「半选」:半选的父节点也是被引用的,要一起存下来。
+  // 再滤掉分组节点 —— 它们的 id 是前端编的(负数),发过去只会污染数据。
   const checked = treeRef.value.getCheckedKeys(false) as number[]
   const halfChecked = treeRef.value.getHalfCheckedKeys() as number[]
-  rolePermIds.value[currentRole.value.id] = [...checked, ...halfChecked]
+  const permissionIds = [...checked, ...halfChecked].filter((id) => realPermIds.value.has(id))
+
+  // 保存仍是覆盖式的,只是现在读得到原值了,所以只有"清空"这一种情况值得拦一下:
+  // 全不勾通常是误操作(比如点了「清空」按钮后忘了重选),后果又是该角色所有人立即失去操作能力
+  if (permissionIds.length === 0) {
+    try {
+      await ElMessageBox.confirm(
+        `「${role.roleName}」的全部权限将被移除,该角色的用户会立刻失去所有操作能力。确定继续吗?`,
+        '清空权限',
+        { confirmButtonText: '确定清空', cancelButtonText: '取消', type: 'warning' },
+      )
+    } catch {
+      return
+    }
+  }
 
   drawerSubmitting.value = true
   try {
-    // TODO(api): PUT /role/{roleId}/permissions
-    await new Promise((r) => setTimeout(r, 380))
-    ElMessage.success(`「${currentRole.value.roleName}」的权限已更新(演示环境未真正落库)`)
+    await assignPermissions(role.id, permissionIds)
+    ElMessage.success(`「${role.roleName}」的权限已更新`)
     drawerVisible.value = false
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '权限保存失败')
   } finally {
     drawerSubmitting.value = false
   }
@@ -106,25 +161,8 @@ async function submitPermissions() {
 
 function toggleAll(checked: boolean) {
   if (!treeRef.value) return
-  if (checked) {
-    treeRef.value.setCheckedKeys(allLeafIds.value)
-  } else {
-    treeRef.value.setCheckedKeys([])
-  }
+  treeRef.value.setCheckedKeys(checked ? allPermIds.value : [])
 }
-
-/** 全部叶子节点 id,用于"全选" */
-const allLeafIds = computed(() => {
-  const ids: number[] = []
-  const walk = (nodes: PermissionVO[]) => {
-    for (const n of nodes) {
-      if (n.children.length === 0) ids.push(n.id)
-      else walk(n.children)
-    }
-  }
-  walk(MOCK_PERMISSION_TREE)
-  return ids
-})
 
 onMounted(load)
 </script>
@@ -137,30 +175,18 @@ onMounted(load)
       description="角色是权限的集合。用户的最终权限 = 其所有角色权限的并集。"
     />
 
+    <!-- 权限读写已经配对了,这里不再需要"看不到原有权限"的告警 -->
     <!-- ============ 角色卡片 ============ -->
     <section class="role-grid">
-      <article v-for="role in MOCK_ROLES" :key="role.id" class="role-card wo-card">
+      <article v-for="role in roles" :key="role.id" class="role-card wo-card">
         <header class="role-card__head">
           <div class="role-card__title">
             <h2>{{ role.roleName }}</h2>
             <code class="role-card__code">{{ role.roleCode }}</code>
           </div>
-
-          <span class="role-card__count" :class="{ 'is-full': permCountOf(role.id) === totalPermCount }">
-            <b class="wo-num">{{ permCountOf(role.id) }}</b>
-            <i>/ {{ totalPermCount }}</i>
-          </span>
         </header>
 
         <p class="role-card__remark">{{ role.remark ?? '暂无说明' }}</p>
-
-        <div class="role-card__perms">
-          <span v-for="p in topPermsOf(role.id)" :key="p" class="perm-chip">{{ p }}</span>
-          <span v-if="permCountOf(role.id) > 4" class="perm-chip perm-chip--more">
-            +{{ permCountOf(role.id) - 4 }}
-          </span>
-          <span v-if="permCountOf(role.id) === 0" class="wo-text-3 role-card__none">未分配任何权限</span>
-        </div>
 
         <footer class="role-card__foot">
           <el-button text type="primary" @click="openPermissionDrawer(role)">配置权限</el-button>
@@ -170,21 +196,28 @@ onMounted(load)
 
     <!-- ============ 权限分配抽屉 ============ -->
     <el-drawer v-model="drawerVisible" size="440px" :title="`配置权限 · ${currentRole?.roleName ?? ''}`">
-      <div class="drawer">
+      <div v-loading="!permLoaded" class="drawer">
         <div class="drawer__bar">
           <span class="wo-text-3">
             勾选该角色可执行的操作,共
             <b class="wo-num">{{ totalPermCount }}</b> 项
           </span>
           <div class="drawer__quick">
-            <el-button text size="small" @click="toggleAll(true)">全选</el-button>
-            <el-button text size="small" @click="toggleAll(false)">清空</el-button>
+            <el-button text size="small" :disabled="!permLoaded" @click="toggleAll(true)">全选</el-button>
+            <el-button text size="small" :disabled="!permLoaded" @click="toggleAll(false)">清空</el-button>
           </div>
         </div>
 
+        <!--
+          树等权限读回来再挂载:default-checked-keys 只在树创建时生效,
+          先渲染空树再改这个值是不会重新勾上的。
+          :key 用角色 id —— 不关抽屉直接切角色时,强制重建才不会继承上一个角色的勾选。
+        -->
         <el-tree
+          v-if="permLoaded"
           ref="treeRef"
-          :data="MOCK_PERMISSION_TREE"
+          :key="currentRole?.id ?? 0"
+          :data="groupedTree"
           node-key="id"
           show-checkbox
           default-expand-all
@@ -195,7 +228,8 @@ onMounted(load)
           <template #default="{ data }">
             <span class="tree-node">
               <span class="tree-node__name">{{ data.permName }}</span>
-              <code class="tree-node__code">{{ data.permCode }}</code>
+              <!-- 只有真实权限显示权限码;分组节点的 permCode 是命名空间,显示出来反而误导 -->
+              <code v-if="data.children.length === 0" class="tree-node__code">{{ data.permCode }}</code>
             </span>
           </template>
         </el-tree>
@@ -204,7 +238,12 @@ onMounted(load)
       <template #footer>
         <div class="drawer__foot">
           <el-button @click="drawerVisible = false">取消</el-button>
-          <el-button type="primary" :loading="drawerSubmitting" @click="submitPermissions">
+          <el-button
+            type="primary"
+            :loading="drawerSubmitting"
+            :disabled="!permLoaded"
+            @click="submitPermissions"
+          >
             保存
           </el-button>
         </div>
@@ -269,64 +308,11 @@ onMounted(load)
   border-radius: 4px;
 }
 
-// 权限计数:满权限时用主色强调
-.role-card__count {
-  flex: none;
-  display: flex;
-  align-items: baseline;
-  gap: 3px;
-  color: var(--wo-ink-3);
-
-  b {
-    font-size: 20px;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    color: var(--wo-ink-2);
-  }
-
-  i {
-    font-style: normal;
-    font-size: 11px;
-  }
-
-  &.is-full b {
-    color: var(--wo-brand);
-  }
-}
-
 .role-card__remark {
   font-size: 12.5px;
   line-height: 1.65;
   color: var(--wo-ink-3);
-  // 说明文字长短不一,固定两行高度让卡片底部对齐
-  min-height: 41px;
-}
-
-.role-card__perms {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  margin: 14px 0 16px;
-  min-height: 24px;
-}
-
-.perm-chip {
-  padding: 2px 9px;
-  border-radius: 999px;
-  background: var(--wo-brand-wash);
-  color: var(--wo-brand-hover);
-  font-size: 11.5px;
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.perm-chip--more {
-  background: var(--wo-surface-sunken);
-  color: var(--wo-ink-3);
-}
-
-.role-card__none {
-  font-size: 12px;
+  margin-bottom: 16px;
 }
 
 .role-card__foot {

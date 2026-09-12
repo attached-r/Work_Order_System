@@ -12,7 +12,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { useUserStore } from '@/stores/user'
-import { MOCK_ACCOUNTS, getRoleName } from '@/mock'
+import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '@/constants/demo'
 
 const router = useRouter()
 const route = useRoute()
@@ -62,7 +62,7 @@ async function handleSubmit() {
 /** 一键填入演示账号 */
 function fillAccount(username: string) {
   form.username = username
-  form.password = 'admin123'
+  form.password = DEMO_PASSWORD
 }
 </script>
 
@@ -156,10 +156,10 @@ function fillAccount(username: string) {
 
         <!-- 演示账号快填 -->
         <div class="demo">
-          <p class="wo-eyebrow demo__title">演示账号 · 口令均为 admin123</p>
+          <p class="wo-eyebrow demo__title">演示账号 · 口令均为 {{ DEMO_PASSWORD }}</p>
           <div class="demo__list">
             <button
-              v-for="acc in MOCK_ACCOUNTS"
+              v-for="acc in DEMO_ACCOUNTS"
               :key="acc.username"
               type="button"
               class="demo__item"
@@ -167,7 +167,7 @@ function fillAccount(username: string) {
               @click="fillAccount(acc.username)"
             >
               <b>{{ acc.username }}</b>
-              <i>{{ getRoleName(acc.user.roles[0] ?? '') }}</i>
+              <i>{{ acc.roleName }}</i>
             </button>
           </div>
         </div>

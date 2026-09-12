@@ -253,6 +253,36 @@
       }
     },
     "/role/{roleId}/permissions": {
+      "get": {
+        "tags": [
+          "角色管理"
+        ],
+        "summary": "角色已分配权限ID列表",
+        "operationId": "listPermissions",
+        "parameters": [
+          {
+            "name": "roleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultListLong"
+                }
+              }
+            }
+          }
+        }
+      },
       "put": {
         "tags": [
           "角色管理"
@@ -795,6 +825,46 @@
         }
       }
     },
+    "/workorder/stats": {
+      "get": {
+        "tags": [
+          "工单管理"
+        ],
+        "summary": "工单统计",
+        "operationId": "stats",
+        "parameters": [
+          {
+            "name": "orderType",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "keyword",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultWorkOrderStatsVO"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/workorder/page": {
       "get": {
         "tags": [
@@ -899,6 +969,32 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "departmentId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "roleCode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -929,6 +1025,27 @@
               "*/*": {
                 "schema": {
                   "$ref": "#/components/schemas/ResultUserVO"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/directory": {
+      "get": {
+        "tags": [
+          "用户管理"
+        ],
+        "summary": "用户目录",
+        "operationId": "directory",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultListUserBriefVO"
                 }
               }
             }
@@ -998,6 +1115,27 @@
           }
         }
       }
+    },
+    "/department/directory": {
+      "get": {
+        "tags": [
+          "部门管理"
+        ],
+        "summary": "部门目录",
+        "operationId": "directory_1",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultListDepartmentBriefVO"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1014,7 +1152,7 @@
           },
           "phone": {
             "type": "string",
-            "description": "联系电话,可空",
+            "description": "联系电话;传空字符串表示清空,不传(null)表示不修改",
             "maxLength": 20,
             "minLength": 0
           },
@@ -1628,6 +1766,63 @@
           }
         }
       },
+      "ResultWorkOrderStatsVO": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/WorkOrderStatsVO"
+          },
+          "timestamp": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "StatusCount": {
+        "type": "object",
+        "description": "状态计数",
+        "properties": {
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "description": "状态码 0-7"
+          },
+          "statusDesc": {
+            "type": "string",
+            "description": "状态名称"
+          },
+          "count": {
+            "type": "integer",
+            "format": "int64",
+            "description": "该状态下的工单数"
+          }
+        }
+      },
+      "WorkOrderStatsVO": {
+        "type": "object",
+        "description": "工单统计",
+        "properties": {
+          "total": {
+            "type": "integer",
+            "format": "int64",
+            "description": "当前可见范围内的工单总数"
+          },
+          "statusCounts": {
+            "type": "array",
+            "description": "各状态工单数,含数量为 0 的状态,按状态码升序",
+            "items": {
+              "$ref": "#/components/schemas/StatusCount"
+            }
+          }
+        }
+      },
       "PageResultWorkOrderVO": {
         "type": "object",
         "properties": {
@@ -1805,6 +2000,10 @@
             "type": "string",
             "description": "所属部门名称"
           },
+          "phone": {
+            "type": "string",
+            "description": "联系电话,未填写时为空"
+          },
           "status": {
             "type": "integer",
             "format": "int32",
@@ -1838,6 +2037,91 @@
           },
           "data": {
             "$ref": "#/components/schemas/UserVO"
+          },
+          "timestamp": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "ResultListUserBriefVO": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserBriefVO"
+            }
+          },
+          "timestamp": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "UserBriefVO": {
+        "type": "object",
+        "description": "用户只读目录项(不含权限码)",
+        "properties": {
+          "userId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "用户id"
+          },
+          "username": {
+            "type": "string",
+            "description": "用户名"
+          },
+          "realName": {
+            "type": "string",
+            "description": "真实姓名(前端展示用)"
+          },
+          "departmentId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "所属部门id;null 表示未归属部门"
+          },
+          "departmentName": {
+            "type": "string",
+            "description": "所属部门名称"
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "description": "状态:1启用 0停用"
+          },
+          "roles": {
+            "type": "array",
+            "description": "角色标识列表,如 HANDLER",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "ResultListLong": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int64"
+            }
           },
           "timestamp": {
             "type": "integer",
@@ -1990,6 +2274,47 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/Department"
+            }
+          },
+          "timestamp": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "DepartmentBriefVO": {
+        "type": "object",
+        "description": "部门只读目录项",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "description": "部门id"
+          },
+          "deptCode": {
+            "type": "string",
+            "description": "部门编码"
+          },
+          "deptName": {
+            "type": "string",
+            "description": "部门名称"
+          }
+        }
+      },
+      "ResultListDepartmentBriefVO": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DepartmentBriefVO"
             }
           },
           "timestamp": {

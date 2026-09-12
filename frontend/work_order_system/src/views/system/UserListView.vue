@@ -5,17 +5,33 @@
  * 行内操作较多(分配角色/调整部门/重置密码/启停用/编辑/删除),
  * 所以把低频且危险的动作收进「更多」下拉,只把"分配角色"留在外面,
  * 避免每行挂 6 个按钮把表格压得没法看。
+ *
+ * 筛选全在服务端做(/user/page 支持 keyword / departmentId / status / roleCode),
+ * 不在页内过滤 —— 那样只会得到"这一页里恰好符合条件的人",是误导。
  */
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 // 裸图标名不会被 resolver 自动解析,必须显式导入
 import { ArrowDown, Delete, Edit, Key, OfficeBuilding, Search, SwitchButton } from '@element-plus/icons-vue'
 import PageHeader from '@/components/PageHeader.vue'
-import { MOCK_DEPARTMENTS, MOCK_ROLES, MOCK_USERS, getRoleName } from '@/mock'
+import {
+  assignDepartment,
+  assignRoles,
+  deleteUser,
+  pageUsers,
+  resetPassword,
+  updateUser,
+  updateUserStatus,
+} from '@/api'
+import { useDepartmentDirectory, useRoleDirectory } from '@/composables/useDirectories'
+import { getRoleName } from '@/constants/role'
 import { useUserStore } from '@/stores/user'
 import type { UserVO } from '@/types/domain'
 
 const userStore = useUserStore()
+// 部门下拉的选项与角色弹窗的候选项
+const { ensure: ensureDepts, departments } = useDepartmentDirectory()
+const { ensure: ensureRoles, roles } = useRoleDirectory()
 
 /** 只读地挡一下越权操作:不能停用/删除自己 */
 const myId = computed(() => userStore.user?.userId ?? -1)
@@ -29,35 +45,23 @@ const query = reactive({
   size: 10,
   keyword: '',
   departmentId: null as number | null,
+  status: null as number | null,
 })
 
-const deptMap = computed(() => {
-  const m = new Map<number, string>()
-  for (const d of MOCK_DEPARTMENTS) m.set(d.id, d.deptName)
-  return m
-})
-
-function deptName(id: number | null): string {
-  if (id === null) return '全局'
-  return deptMap.value.get(id) ?? `部门 ${id}`
-}
-
-// TODO(api): 换成 GET /user/page
 async function load() {
   loading.value = true
   try {
-    await new Promise((r) => setTimeout(r, 180))
-
-    const kw = query.keyword.trim().toLowerCase()
-    const filtered = MOCK_USERS.filter((u) => {
-      if (query.departmentId !== null && u.departmentId !== query.departmentId) return false
-      if (kw && !u.username.toLowerCase().includes(kw) && !u.realName.toLowerCase().includes(kw)) return false
-      return true
+    const res = await pageUsers({
+      current: query.current,
+      size: query.size,
+      keyword: query.keyword,
+      departmentId: query.departmentId,
+      status: query.status,
     })
-
-    const start = (query.current - 1) * query.size
-    rows.value = filtered.slice(start, start + query.size)
-    total.value = filtered.length
+    rows.value = res.records
+    total.value = res.total
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '用户列表加载失败')
   } finally {
     loading.value = false
   }
@@ -71,6 +75,7 @@ function search() {
 function resetFilters() {
   query.keyword = ''
   query.departmentId = null
+  query.status = null
   query.current = 1
   void load()
 }
@@ -78,26 +83,43 @@ function resetFilters() {
 // ===========================================================================
 // 分配角色
 // ===========================================================================
+/**
+ * ⚠️ 两边的标识不一致,这里必须做一次换算:
+ *   - 读:UserVO.roles 是角色**标识**列表,如 ['SUBMITTER'](给人看的);
+ *   - 写:PUT /user/{userId}/roles 收的是角色**主键 id** 列表(给库用的)。
+ * 勾选框用 id 做 value,所以回显时要把 roles 里的标识翻成 id,
+ * 找不到对应角色的标识(角色表被改过)直接忽略,不让整页崩掉。
+ */
 const roleDialog = ref(false)
 const roleSubmitting = ref(false)
 const roleTarget = ref<UserVO | null>(null)
-const selectedRoles = ref<string[]>([])
+const selectedRoleIds = ref<number[]>([])
 
 function openRoleDialog(row: UserVO) {
   roleTarget.value = row
-  selectedRoles.value = [...row.roles]
+  const codeToId = new Map(roles.value.map((r) => [r.roleCode, r.id]))
+  selectedRoleIds.value = row.roles
+    .map((code) => codeToId.get(code))
+    .filter((id): id is number => id !== undefined)
   roleDialog.value = true
 }
 
 async function submitRoles() {
   if (!roleTarget.value) return
+  // 后端要求至少一个角色,先拦下来免得白跑一趟
+  if (selectedRoleIds.value.length === 0) {
+    ElMessage.warning('请至少选择一个角色')
+    return
+  }
+
   roleSubmitting.value = true
   try {
-    // TODO(api): PUT /user/{userId}/roles
-    await new Promise((r) => setTimeout(r, 380))
-    ElMessage.success(`已更新 ${roleTarget.value.realName} 的角色(演示环境未真正落库)`)
+    await assignRoles(roleTarget.value.userId, selectedRoleIds.value)
+    ElMessage.success(`已更新 ${roleTarget.value.realName} 的角色`)
     roleDialog.value = false
     await load()
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '角色保存失败')
   } finally {
     roleSubmitting.value = false
   }
@@ -106,6 +128,12 @@ async function submitRoles() {
 // ===========================================================================
 // 调整部门
 // ===========================================================================
+/**
+ * ⚠️ 这里没有「全局」选项:AssignDepartmentDTO.departmentId 是 @NotNull,
+ * 后端不接受把部门清空;UpdateUserDTO 的同名字段又是「null 即不改」的语义,
+ * 也清不掉。也就是说「取消归属」这条路径接口层面不存在,所以下拉不做 clearable,
+ * 选了就是换一个部门。
+ */
 const deptDialog = ref(false)
 const deptSubmitting = ref(false)
 const deptTarget = ref<UserVO | null>(null)
@@ -119,13 +147,18 @@ function openDeptDialog(row: UserVO) {
 
 async function submitDept() {
   if (!deptTarget.value) return
+  if (selectedDept.value === null) {
+    ElMessage.warning('请选择部门')
+    return
+  }
   deptSubmitting.value = true
   try {
-    // TODO(api): PUT /user/{userId}/department
-    await new Promise((r) => setTimeout(r, 380))
-    ElMessage.success('部门已调整(演示环境未真正落库)')
+    await assignDepartment(deptTarget.value.userId, selectedDept.value)
+    ElMessage.success('部门已调整')
     deptDialog.value = false
     await load()
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '部门调整失败')
   } finally {
     deptSubmitting.value = false
   }
@@ -159,10 +192,11 @@ async function submitPwd() {
 
   pwdSubmitting.value = true
   try {
-    // TODO(api): PUT /user/{userId}/password
-    await new Promise((r) => setTimeout(r, 380))
-    ElMessage.success('密码已重置(演示环境未真正落库)')
+    await resetPassword(pwdTarget.value.userId, pwdForm.password)
+    ElMessage.success('密码已重置,该用户需重新登录')
     pwdDialog.value = false
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '密码重置失败')
   } finally {
     pwdSubmitting.value = false
   }
@@ -171,16 +205,27 @@ async function submitPwd() {
 // ===========================================================================
 // 编辑用户
 // ===========================================================================
+/**
+ * 只有姓名和手机号两项:
+ *   - 部门不放在这里,免得和上面的「调整部门」两个入口做同一件事,
+ *     而且那个字段在 UpdateUserDTO 里是"null 即不改",在这个表单里语义很别扭;
+ *   - 手机号现在可读可写:打开时回填 row.phone,清空输入框即清空手机号。
+ *
+ * 手机号是三态语义(见 UpdateUserPayload),提交时的映射关系:
+ *   输入框非空 → 传 trim 后的值(覆盖)
+ *   输入框为空 → 传 `''`(清空)
+ * 不再有"留空表示不修改"这个分支 —— 想不改就别动这个框,反正它已经回填了原值。
+ */
 const editDialog = ref(false)
 const editSubmitting = ref(false)
 const editTarget = ref<UserVO | null>(null)
-const editForm = reactive({ realName: '', phone: '', departmentId: null as number | null })
+const editForm = reactive({ realName: '', phone: '' })
 
 function openEditDialog(row: UserVO) {
   editTarget.value = row
   editForm.realName = row.realName
-  editForm.phone = ''
-  editForm.departmentId = row.departmentId
+  // 后端清空后库里存的是空串,统一归一成空串显示,免得 null 在输入框里显示成 "null"
+  editForm.phone = row.phone ?? ''
   editDialog.value = true
 }
 
@@ -193,11 +238,16 @@ async function submitEdit() {
 
   editSubmitting.value = true
   try {
-    // TODO(api): PUT /user/{userId}
-    await new Promise((r) => setTimeout(r, 380))
-    ElMessage.success('用户信息已更新(演示环境未真正落库)')
+    await updateUser(editTarget.value.userId, {
+      realName: editForm.realName.trim(),
+      // 空串是"清空"而不是"不修改",这正是我们要的:框里已有原值,清掉它就是用户的明确意图
+      phone: editForm.phone.trim(),
+    })
+    ElMessage.success('用户信息已更新')
     editDialog.value = false
     await load()
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '用户信息保存失败')
   } finally {
     editSubmitting.value = false
   }
@@ -220,10 +270,13 @@ async function toggleStatus(row: UserVO) {
     return
   }
 
-  // TODO(api): PUT /user/{userId}/status
-  await new Promise((r) => setTimeout(r, 300))
-  ElMessage.success(`已${verb}(演示环境未真正落库)`)
-  await load()
+  try {
+    await updateUserStatus(row.userId, next)
+    ElMessage.success(`已${verb}`)
+    await load()
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : `${verb}失败`)
+  }
 }
 
 async function removeUser(row: UserVO) {
@@ -237,10 +290,13 @@ async function removeUser(row: UserVO) {
     return
   }
 
-  // TODO(api): DELETE /user/{userId}
-  await new Promise((r) => setTimeout(r, 300))
-  ElMessage.success('已删除(演示环境未真正落库)')
-  await load()
+  try {
+    await deleteUser(row.userId)
+    ElMessage.success('已删除')
+    await load()
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '删除失败')
+  }
 }
 
 function handleCommand(command: string, row: UserVO) {
@@ -263,7 +319,12 @@ function handleCommand(command: string, row: UserVO) {
   }
 }
 
-onMounted(load)
+onMounted(() => {
+  void load()
+  // 分配角色 / 调整部门两个弹窗要用到，提前备好
+  void ensureRoles()
+  void ensureDepts()
+})
 </script>
 
 <template>
@@ -289,8 +350,25 @@ onMounted(load)
         </template>
       </el-input>
 
-      <el-select v-model="query.departmentId" placeholder="全部部门" clearable class="filters__select" @change="search">
-        <el-option v-for="d in MOCK_DEPARTMENTS" :key="d.id" :label="d.deptName" :value="d.id" />
+      <el-select
+        v-model="query.departmentId"
+        placeholder="全部部门"
+        clearable
+        class="filters__select"
+        @change="search"
+      >
+        <el-option v-for="d in departments" :key="d.id" :label="d.deptName" :value="d.id" />
+      </el-select>
+
+      <el-select
+        v-model="query.status"
+        placeholder="全部状态"
+        clearable
+        class="filters__select"
+        @change="search"
+      >
+        <el-option label="启用" :value="1" />
+        <el-option label="停用" :value="0" />
       </el-select>
 
       <el-button @click="search">查询</el-button>
@@ -313,9 +391,10 @@ onMounted(load)
         </el-table-column>
 
         <el-table-column label="所属部门" width="130">
+          <!-- UserVO 自带 departmentName,不必再查部门目录 -->
           <template #default="{ row }">
-            <span :class="row.departmentId === null ? 'wo-text-3' : 'wo-text-2'">
-              {{ deptName(row.departmentId) }}
+            <span :class="row.departmentName ? 'wo-text-2' : 'wo-text-3'">
+              {{ row.departmentName ?? '全局' }}
             </span>
           </template>
         </el-table-column>
@@ -375,9 +454,7 @@ onMounted(load)
 
         <template #empty>
           <el-empty description="没有匹配的用户">
-            <el-button v-if="query.keyword || query.departmentId !== null" @click="resetFilters">
-              清除筛选条件
-            </el-button>
+            <el-button v-if="query.keyword" @click="resetFilters">清除筛选条件</el-button>
           </el-empty>
         </template>
       </el-table>
@@ -405,9 +482,10 @@ onMounted(load)
         为 <b>{{ roleTarget?.realName }}</b> 勾选角色,权限按角色的并集生效。
       </p>
 
-      <el-checkbox-group v-model="selectedRoles" class="role-group">
-        <label v-for="r in MOCK_ROLES" :key="r.roleCode" class="role-item">
-          <el-checkbox :value="r.roleCode">
+      <!-- value 用角色主键 id:提交给 /user/{id}/roles 的是 id,不是角色标识 -->
+      <el-checkbox-group v-model="selectedRoleIds" class="role-group">
+        <label v-for="r in roles" :key="r.id" class="role-item">
+          <el-checkbox :value="r.id">
             <b>{{ r.roleName }}</b>
             <i>{{ r.remark }}</i>
           </el-checkbox>
@@ -423,10 +501,11 @@ onMounted(load)
     <!-- ============ 调整部门 ============ -->
     <el-dialog v-model="deptDialog" title="调整所属部门" width="440px">
       <p class="dialog-hint">
-        工单的可见范围按部门隔离,调整为「全局」表示不受部门限制。
+        工单的可见范围按部门隔离。只能换一个部门,不能取消归属 ——
+        接口不接受空的部门ID。
       </p>
-      <el-select v-model="selectedDept" placeholder="请选择部门" clearable style="width: 100%">
-        <el-option v-for="d in MOCK_DEPARTMENTS" :key="d.id" :label="d.deptName" :value="d.id" />
+      <el-select v-model="selectedDept" placeholder="请选择部门" style="width: 100%">
+        <el-option v-for="d in departments" :key="d.id" :label="d.deptName" :value="d.id" />
       </el-select>
 
       <template #footer>
@@ -462,12 +541,8 @@ onMounted(load)
           <el-input v-model="editForm.realName" placeholder="用于工单流转中展示" />
         </el-form-item>
         <el-form-item label="手机号">
-          <el-input v-model="editForm.phone" placeholder="选填" />
-        </el-form-item>
-        <el-form-item label="所属部门">
-          <el-select v-model="editForm.departmentId" placeholder="不调整" clearable style="width: 100%">
-            <el-option v-for="d in MOCK_DEPARTMENTS" :key="d.id" :label="d.deptName" :value="d.id" />
-          </el-select>
+          <!-- 清空输入框即清空手机号(后端按空串=清空处理) -->
+          <el-input v-model="editForm.phone" placeholder="清空此项可删除手机号" clearable />
         </el-form-item>
       </el-form>
 
@@ -494,7 +569,11 @@ onMounted(load)
 }
 
 .filters__select {
-  width: 160px;
+  width: 148px;
+
+  @media (max-width: 720px) {
+    width: calc(50% - 5px);
+  }
 }
 
 .table-card {

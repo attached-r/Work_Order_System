@@ -91,6 +91,34 @@ public class RoleService implements IRoleService {
                 roleId, distinctIds, holders.size());
     }
 
+    /**
+     * 查询角色已绑定的权限ID列表
+     * <p>
+     * 只读接口,不做任何写入,目的是让前端的权限抽屉能把你角色当前的勾选状态回显出来
+     * (与之配对的 {@link #assignPermissions} 是覆盖式写,不回显就存在误清空的风险)。
+     * 权限名称不在这里返回:它是全局字典,前端用权限树接口拿一次即可。
+     *
+     * @param roleId 角色ID
+     * @return 权限ID列表;角色无任何权限时为空列表
+     * @throws BusinessException 角色ID非法(400)、角色不存在(404)
+     */
+    @Override
+    public List<Long> listPermissionIds(Long roleId) {
+        // 路径参数不经过 Bean Validation,这里显式拦一次非法ID,
+        // 让「角色ID本身有问题」和「角色ID合法但查不到」能返回不同的错误码(400 / 404)
+        if (roleId == null || roleId <= 0) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "角色ID非法");
+        }
+        requireRole(roleId);
+
+        // role_permission 一个角色通常只有十几行,直接取回内存里抽 permissionId,无需 join 权限表
+        return rolePermissionMapper.selectList(
+                        new LambdaQueryWrapper<RolePermission>().eq(RolePermission::getRoleId, roleId))
+                .stream()
+                .map(RolePermission::getPermissionId)
+                .toList();
+    }
+
     /** 校验角色存在,不存在即抛 404 */
     private void requireRole(Long roleId) {
         if (roleMapper.selectById(roleId) == null) {

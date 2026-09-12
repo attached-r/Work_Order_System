@@ -24,6 +24,7 @@ import com.rj.model.pojo.WorkOrder;
 import com.rj.model.pojo.WorkOrderOperateLog;
 import com.rj.model.pojo.WorkOrderResource;
 import com.rj.model.vo.WorkOrderDetailVO;
+import com.rj.model.vo.WorkOrderStatsVO;
 import com.rj.model.vo.WorkOrderVO;
 import com.rj.service.IWorkOrderService;
 import lombok.RequiredArgsConstructor;
@@ -35,10 +36,13 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 /**
  * 工单业务实现(模块二)。
@@ -183,10 +187,53 @@ public class WorkOrderService implements IWorkOrderService {
      */
     @Override
     public PageResult<WorkOrderVO> page(long current, long size, Integer status, Integer orderType, String keyword) {
-        LambdaQueryWrapper<WorkOrder> wrapper = new LambdaQueryWrapper<>();
+        LambdaQueryWrapper<WorkOrder> wrapper = buildListWrapper(orderType, keyword);
         if (status != null) {
             wrapper.eq(WorkOrder::getStatus, status);
         }
+        wrapper.orderByDesc(WorkOrder::getCreateTime);
+
+        Page<WorkOrder> page = workOrderMapper.selectPage(new Page<>(current, size), wrapper);
+        List<WorkOrderVO> records = page.getRecords().stream().map(this::toVO).toList();
+        return new PageResult<>(records, page.getTotal(), page.getCurrent(), page.getSize());
+    }
+
+    /**
+     * 工单统计:与列表查询共用同一套过滤与数据范围,只在最后一步按状态分组。
+     * <p>
+     * 这里只 select status 一列再在内存里分组,而不是拼 {@code GROUP BY} 的原生 SQL:
+     * 数据范围条件是由 {@link #applyListScope} 动态拼出的嵌套 and/or 条件,换成原生
+     * SQL 就要把那套逻辑重写一遍,两边一旦不同步就会「列表看到 10 条、统计说 8 条」。
+     * 单列扫描的开销远小于这份一致性风险。
+     */
+    @Override
+    public WorkOrderStatsVO stats(Integer orderType, String keyword) {
+        LambdaQueryWrapper<WorkOrder> wrapper = buildListWrapper(orderType, keyword);
+        wrapper.select(WorkOrder::getStatus);
+
+        Map<Integer, Long> counted = workOrderMapper.selectList(wrapper).stream()
+                .collect(Collectors.groupingBy(WorkOrder::getStatus, Collectors.counting()));
+
+        // 8 个状态全返回(含 0),前端直接渲染,不必自己补缺
+        List<WorkOrderStatsVO.StatusCount> statusCounts = Arrays.stream(WorkOrderStatus.values())
+                .map(status -> new WorkOrderStatsVO.StatusCount(
+                        status.getCode(),
+                        status.getDesc(),
+                        counted.getOrDefault(status.getCode(), 0L)))
+                .toList();
+
+        WorkOrderStatsVO vo = new WorkOrderStatsVO();
+        vo.setStatusCounts(statusCounts);
+        vo.setTotal(statusCounts.stream().mapToLong(WorkOrderStatsVO.StatusCount::getCount).sum());
+        return vo;
+    }
+
+    /**
+     * 构造列表/统计共用的查询条件:类型 + 关键词 + 数据范围。
+     * 抽出这个方法是为了让「列表」与「统计」不可能出现口径差异。
+     */
+    private LambdaQueryWrapper<WorkOrder> buildListWrapper(Integer orderType, String keyword) {
+        LambdaQueryWrapper<WorkOrder> wrapper = new LambdaQueryWrapper<>();
         if (orderType != null) {
             wrapper.eq(WorkOrder::getOrderType, orderType);
         }
@@ -195,11 +242,7 @@ public class WorkOrderService implements IWorkOrderService {
                     .or().like(WorkOrder::getOrderNo, keyword));
         }
         applyListScope(wrapper);
-        wrapper.orderByDesc(WorkOrder::getCreateTime);
-
-        Page<WorkOrder> page = workOrderMapper.selectPage(new Page<>(current, size), wrapper);
-        List<WorkOrderVO> records = page.getRecords().stream().map(this::toVO).toList();
-        return new PageResult<>(records, page.getTotal(), page.getCurrent(), page.getSize());
+        return wrapper;
     }
 
     /**

@@ -8,6 +8,7 @@ import com.rj.model.dto.ReviewDTO;
 import com.rj.model.dto.WithdrawDTO;
 import com.rj.model.dto.WorkOrderCreateDTO;
 import com.rj.model.vo.WorkOrderDetailVO;
+import com.rj.model.vo.WorkOrderStatsVO;
 import com.rj.model.vo.WorkOrderVO;
 
 /**
@@ -46,6 +47,18 @@ public interface IWorkOrderService {
      * @return 分页结果
      */
     PageResult<WorkOrderVO> page(long current, long size, Integer status, Integer orderType, String keyword);
+
+    /**
+     * 工单统计:当前可见范围内的总数与各状态数量。
+     * <p>
+     * 数据范围与 {@link #page} 完全一致;orderType/keyword 过滤同样生效,但<b>不接 status</b>——
+     * 列表页的状态筛选条必须在切换状态时保持各状态数量稳定,否则会自相矛盾。
+     *
+     * @param orderType 工单类型过滤,可空
+     * @param keyword   标题/编号模糊搜索,可空
+     * @return 统计结果
+     */
+    WorkOrderStatsVO stats(Integer orderType, String keyword);
 
     /**
      * 工单详情(含资源明细与操作日志),带数据范围校验。

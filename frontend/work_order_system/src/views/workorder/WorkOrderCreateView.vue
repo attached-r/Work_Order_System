@@ -16,7 +16,9 @@ import type { FormInstance, FormRules } from 'element-plus'
 import { Delete, Plus } from '@element-plus/icons-vue'
 import PageHeader from '@/components/PageHeader.vue'
 import { ORDER_TYPE_OPTIONS, PRIORITY_OPTIONS, getOrderTypeLabel, getPriorityLabel } from '@/constants/workorder'
-import { mockWorkOrderDetail } from '@/mock'
+import { createWorkOrder, getWorkOrder, resubmitWorkOrder } from '@/api'
+import type { WorkOrderSavePayload } from '@/api'
+import { parseTime, toIsoLocal } from '@/utils/datetime'
 import { useUserStore } from '@/stores/user'
 import type { WorkOrderResourceForm } from '@/types/domain'
 
@@ -26,6 +28,7 @@ const userStore = useUserStore()
 
 const formRef = ref<FormInstance>()
 const submitting = ref(false)
+const loading = ref(false)
 
 /** 从详情页"重新提交"跳进来时带 ?from=id,用于回填原内容 */
 const fromId = computed(() => {
@@ -42,7 +45,8 @@ const form = reactive({
   orderType: null as number | null,
   // 优先级不给 null:只有三档且默认"中",el-radio-group 的 modelValue 也不接受 null
   priority: 2,
-  expireTime: null as string | null,
+  // 绑 Date 而不是字符串:后端只认 ISO 的 T 分隔写法,转换统一交给 toIsoLocal
+  expireTime: null as Date | null,
   resources: [] as WorkOrderResourceForm[],
 })
 
@@ -58,46 +62,92 @@ const rules: FormRules = {
 
 /** 新增一行资源明细 */
 function addResource() {
-  form.resources.push({ resourceName: '', resourceType: null, quantity: 1, remark: null })
+  form.resources.push({ resourceName: '', resourceType: null, quantity: 1, unit: null, remark: null })
 }
 
 function removeResource(index: number) {
   form.resources.splice(index, 1)
 }
 
-/** 提交前把资源明细里的空行剔掉,避免后端收到无意义数据 */
+/**
+ * 提交前把资源明细里的空行剔掉,避免后端收到无意义数据。
+ * 只以「资源名称」判空:名称是这一行的主字段,填了名称就说明这行是有意的,
+ * 此时若类别没填,由 handleSubmit 明确报错,而不是悄悄丢弃。
+ */
 const validResources = computed(() => form.resources.filter((r) => r.resourceName.trim()))
 
 const contentLength = computed(() => form.content.length)
 
-// TODO(api): 换成 GET /workorder/{id} 回填
+/** 重新提交时回填原工单内容 */
 async function loadForResubmit() {
   if (fromId.value === null) return
-  const d = mockWorkOrderDetail(fromId.value)
-  if (!d) return
-
-  form.title = d.title
-  form.content = d.content ?? ''
-  form.orderType = d.orderType
-  form.priority = d.priority
-  form.resources = d.resources.map((r) => ({
-    resourceName: r.resourceName,
-    resourceType: r.resourceType,
-    quantity: r.quantity ?? 1,
-    remark: r.remark,
-  }))
+  loading.value = true
+  try {
+    const d = await getWorkOrder(fromId.value)
+    form.title = d.title
+    form.content = d.content ?? ''
+    form.orderType = d.orderType
+    form.priority = d.priority
+    form.expireTime = parseTime(d.expireTime)
+    form.resources = d.resources.map((r) => ({
+      resourceName: r.resourceName,
+      resourceType: r.resourceType,
+      quantity: r.quantity ?? 1,
+      unit: r.unit,
+      remark: r.remark,
+    }))
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '原工单加载失败')
+  } finally {
+    loading.value = false
+  }
 }
 
 async function handleSubmit() {
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
 
+  // 后端也会挡,但来回一趟才知道不如本地先拦
+  if (form.expireTime && form.expireTime.getTime() <= Date.now()) {
+    ElMessage.warning('期望完成时间必须晚于当前时间')
+    return
+  }
+
+  // 后端 WorkOrderResourceDTO.resourceType 是 @NotBlank,漏填只会换来一句
+  // 「资源类别不能为空」,不如在这里指出是第几行
+  const incomplete = validResources.value.findIndex((r) => !r.resourceType?.trim())
+  if (incomplete !== -1) {
+    ElMessage.warning(`资源明细第 ${incomplete + 1} 行未填写类别`)
+    return
+  }
+
   submitting.value = true
   try {
-    // TODO(api): POST /workorder  或  POST /workorder/{id}/resubmit
-    await new Promise((r) => setTimeout(r, 520))
+    const payload: WorkOrderSavePayload = {
+      title: form.title,
+      content: form.content || null,
+      orderType: form.orderType as number,
+      priority: form.priority,
+      expireTime: form.expireTime ? toIsoLocal(form.expireTime) : null,
+      resources: validResources.value.map((r) => ({
+        resourceName: r.resourceName.trim(),
+        resourceType: (r.resourceType ?? '').trim(),
+        quantity: r.quantity,
+        unit: r.unit,
+        remark: r.remark,
+      })),
+    }
+
+    if (isResubmit.value && fromId.value !== null) {
+      await resubmitWorkOrder(fromId.value, payload)
+    } else {
+      await createWorkOrder(payload)
+    }
+
     ElMessage.success(isResubmit.value ? '工单已重新提交' : '工单已提交,等待审核')
     router.push({ name: 'workorder-list' })
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '提交失败,请稍后重试')
   } finally {
     submitting.value = false
   }
@@ -143,7 +193,7 @@ onMounted(loadForResubmit)
       </template>
     </PageHeader>
 
-    <div class="create__grid">
+    <div v-loading="loading" class="create__grid">
       <!-- ==================== 左:表单 ==================== -->
       <el-form
         ref="formRef"
@@ -196,11 +246,12 @@ onMounted(loadForResubmit)
           </div>
 
           <el-form-item label="期望完成时间">
+            <!-- 不设 value-format:绑 Date 并由 toIsoLocal 转成后端认的 ISO 写法 -->
             <el-date-picker
               v-model="form.expireTime"
               type="datetime"
               placeholder="不填则默认 72 小时后到期"
-              value-format="YYYY-MM-DD HH:mm:ss"
+              :disabled-date="(d: Date) => d.getTime() < Date.now() - 86_400_000"
               style="width: 100%"
             />
           </el-form-item>
@@ -260,13 +311,19 @@ onMounted(loadForResubmit)
 
             <el-table-column label="类型" width="140">
               <template #default="{ row }">
-                <el-input v-model="row.resourceType" placeholder="数据库 / 计算资源" />
+                <el-input v-model="row.resourceType" placeholder="必填,如 数据库" />
               </template>
             </el-table-column>
 
             <el-table-column label="数量" width="110">
               <template #default="{ row }">
                 <el-input-number v-model="row.quantity" :min="1" :max="999" controls-position="right" style="width: 100%" />
+              </template>
+            </el-table-column>
+
+            <el-table-column label="单位" width="100">
+              <template #default="{ row }">
+                <el-input v-model="row.unit" placeholder="台 / 个" />
               </template>
             </el-table-column>
 

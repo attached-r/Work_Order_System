@@ -10,7 +10,6 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { useUserStore } from '@/stores/user'
-import { MOCK_DEPARTMENTS } from '@/mock'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -18,13 +17,17 @@ const userStore = useUserStore()
 const formRef = ref<FormInstance>()
 const loading = ref(false)
 
+/**
+ * 没有「所属部门」这一项:两个部门查询接口(/department/list 与
+ * /department/directory)都要求**已登录**,而注册时用户还没有 token,都拿不到。
+ * 部门由管理员在用户管理里分配 —— 反正新账号也没有角色,本来就要等管理员配完才能用。
+ */
 const form = reactive({
   username: '',
   realName: '',
   password: '',
   confirmPassword: '',
   phone: '',
-  departmentId: null as number | null,
 })
 
 /** 两次密码一致性校验 */
@@ -67,7 +70,10 @@ async function handleSubmit() {
     await userStore.register({
       username: form.username,
       password: form.password,
+      confirmPassword: form.confirmPassword,
       realName: form.realName,
+      // 空串会被请求层丢掉,后端收到的就是不传
+      phone: form.phone,
     })
     ElMessage.success('注册成功,请登录')
     router.push({ name: 'login' })
@@ -104,7 +110,7 @@ async function handleSubmit() {
       <header class="register__head">
         <p class="wo-eyebrow">Create account</p>
         <h2>注册新账号</h2>
-        <p class="wo-text-3">注册后由管理员分配角色与权限</p>
+        <p class="wo-text-3">注册后由管理员分配角色、权限与所属部门</p>
       </header>
 
       <el-form ref="formRef" :model="form" :rules="rules" label-position="top">
@@ -126,22 +132,9 @@ async function handleSubmit() {
           </el-form-item>
         </div>
 
-        <div class="register__row">
-          <el-form-item label="手机号" prop="phone">
-            <el-input v-model="form.phone" placeholder="选填" clearable />
-          </el-form-item>
-
-          <el-form-item label="所属部门" prop="departmentId">
-            <el-select v-model="form.departmentId" placeholder="选填" clearable class="register__select">
-              <el-option
-                v-for="d in MOCK_DEPARTMENTS"
-                :key="d.id"
-                :label="d.deptName"
-                :value="d.id"
-              />
-            </el-select>
-          </el-form-item>
-        </div>
+        <el-form-item label="手机号" prop="phone">
+          <el-input v-model="form.phone" placeholder="选填" clearable />
+        </el-form-item>
 
         <el-button type="primary" class="register__submit" :loading="loading" @click="handleSubmit">
           注 册
@@ -242,10 +235,6 @@ async function handleSubmit() {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0 16px;
-}
-
-.register__select {
-  width: 100%;
 }
 
 .register__submit {

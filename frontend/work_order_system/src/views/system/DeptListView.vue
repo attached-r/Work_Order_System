@@ -7,6 +7,15 @@
  *
  * 删除前先查该部门下还有多少用户:有用户的部门不允许直接删,
  * 这是最容易造成"孤儿数据"的地方,拦在前端能让后端少处理一类异常。
+ *
+ * 两处数据来源的说明:
+ *   - 部门列表**本页自己拉**(GET /department/list,含 remark / createTime)。
+ *     不共用 useDepartmentDirectory 的那份目录:目录走的是 /department/directory,
+ *     返回的精简字段里没有 remark,而本页要编辑备注。
+ *     改完只需 invalidate() 通知那份目录失效,用户管理页的下拉与工单详情的部门名
+ *     下次进页面就会重新拉;
+ *   - 成员数没有对应接口,用用户目录在客户端聚合。该目录是全查不分页的,
+ *     所以这个数字是准的,没有分页上限截断的问题。
  */
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -14,16 +23,22 @@ import type { FormInstance, FormRules } from 'element-plus'
 // 裸图标名不会被 resolver 自动解析,必须显式导入
 import { OfficeBuilding, Plus } from '@element-plus/icons-vue'
 import PageHeader from '@/components/PageHeader.vue'
-import { MOCK_DEPARTMENTS, MOCK_USERS } from '@/mock'
+import { createDepartment, deleteDepartment, listDepartments, updateDepartment } from '@/api'
+import { useDepartmentDirectory, useUserDirectory } from '@/composables/useDirectories'
 import type { Department } from '@/types/domain'
 
 const loading = ref(false)
 const rows = ref<Department[]>([])
 
+// 只借它的 invalidate:本页改完部门,要通知共享目录里的部门名也过期了
+const { invalidate: invalidateDepts } = useDepartmentDirectory()
+// 只用来数各部门有多少人
+const { ensure: ensureUsers, allUsers } = useUserDirectory()
+
 /** 部门 id -> 人数,用于展示与删除校验 */
 const memberCount = computed(() => {
   const m = new Map<number, number>()
-  for (const u of MOCK_USERS) {
+  for (const u of allUsers.value) {
     if (u.departmentId === null) continue
     m.set(u.departmentId, (m.get(u.departmentId) ?? 0) + 1)
   }
@@ -34,15 +49,21 @@ function membersOf(id: number): number {
   return memberCount.value.get(id) ?? 0
 }
 
-// TODO(api): 换成 GET /department/list
 async function load() {
   loading.value = true
   try {
-    await new Promise((r) => setTimeout(r, 180))
-    rows.value = [...MOCK_DEPARTMENTS]
+    rows.value = await listDepartments()
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '部门列表加载失败')
   } finally {
     loading.value = false
   }
+}
+
+/** 增删改之后:本页重拉,同时让共享目录失效(部门名在别处也有缓存) */
+async function reload() {
+  invalidateDepts()
+  await load()
 }
 
 // ===========================================================================
@@ -100,13 +121,25 @@ async function submit() {
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
 
+  const payload = {
+    deptCode: form.deptCode.trim(),
+    deptName: form.deptName.trim(),
+    // 空串会被后端当成有效说明存下来,统一转 null
+    remark: form.remark.trim() || null,
+  }
+
   submitting.value = true
   try {
-    // TODO(api): POST /department  或  PUT /department/{id}
-    await new Promise((r) => setTimeout(r, 380))
-    ElMessage.success(editing.value ? '部门已更新(演示环境未真正落库)' : '部门已创建(演示环境未真正落库)')
+    if (editing.value) {
+      await updateDepartment(editing.value.id, payload)
+    } else {
+      await createDepartment(payload)
+    }
+    ElMessage.success(editing.value ? '部门已更新' : '部门已创建')
     dialogVisible.value = false
-    await load()
+    await reload()
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '部门保存失败')
   } finally {
     submitting.value = false
   }
@@ -138,13 +171,21 @@ async function remove(row: Department) {
     return
   }
 
-  // TODO(api): DELETE /department/{id}
-  await new Promise((r) => setTimeout(r, 300))
-  ElMessage.success('已删除(演示环境未真正落库)')
-  await load()
+  try {
+    await deleteDepartment(row.id)
+    ElMessage.success('已删除')
+    await reload()
+  } catch (e) {
+    // 后端还会再挡一道:仍被工单引用时同样拒绝删除
+    ElMessage.error(e instanceof Error ? e.message : '删除失败')
+  }
 }
 
-onMounted(load)
+onMounted(() => {
+  void load()
+  // 数人数用的,失败也不影响部门本身
+  void ensureUsers()
+})
 </script>
 
 <template>

@@ -164,9 +164,14 @@ export function canTransition(from: number | null | undefined, to: number): bool
  *
  * 这里只做「状态 + 权限」的粗筛,决定按钮是否出现;
  * 更细的归属校验(比如是不是自己的单、是不是本部门的单)由后端兜底。
+ *
+ * 注意没有「修改」这一项:后端唯一的 workorder:modify 接口是
+ * POST /workorder/{id}/resubmit,而它要求工单处于「已驳回」——
+ * 状态机里 待审核→待审核 不是合法迁移,提交了只会换来 409。
+ * 所以在「待审核」状态下,提单人除了撤回没有别的操作可用。
  */
 export interface WorkOrderAction {
-  key: 'review' | 'dispatch' | 'transfer' | 'process' | 'accept' | 'withdraw' | 'resubmit' | 'edit'
+  key: 'review' | 'dispatch' | 'transfer' | 'process' | 'accept' | 'withdraw' | 'resubmit'
   label: string
   type: 'primary' | 'default' | 'danger' | 'success'
   perm: string | null
@@ -211,10 +216,6 @@ export function availableActions(status: number, perms: string[]): WorkOrderActi
     }
   }
 
-  // 待审核 / 已驳回时允许提单人改内容;撤回与取消共用 withdraw 接口
-  if (status === WorkOrderStatus.PENDING_REVIEW && has('workorder:modify')) {
-    actions.push({ key: 'edit', label: '修改', type: 'default', perm: 'workorder:modify' })
-  }
-
+  // 撤回与取消共用 /withdraw 接口,两者的区别只在工单当前状态
   return actions
 }

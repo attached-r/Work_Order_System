@@ -53,9 +53,15 @@ export default defineConfig({
 
   server: {
     port: 5173,
-    // 后端联调时打开:把 /api 代理到 Spring Boot,顺便绕开 CORS
-    // proxy: {
-    //   '/api': { target: 'http://localhost:8080', changeOrigin: true },
-    // },
+    // 把 /api 代理到 Spring Boot,借同源转发绕开后端未配置的 CORS。
+    // 后端没有 context-path,所以要把 /api 前缀改写掉:
+    // 前端请求 /api/user/login → 实际打到 http://localhost:10001/user/login
+    proxy: {
+      '/api': {
+        target: 'http://localhost:10001',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+    },
   },
 })

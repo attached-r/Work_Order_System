@@ -7,8 +7,13 @@
  *   2. 下方条件栏 —— 关键词 / 类型 / 状态,处理更精确的组合查询。
  *
  * 两张入口共用同一份 query,切换时状态条与下拉框自动保持一致。
+ *
+ * 状态条的数字来自独立的 /workorder/stats,而不是当前这一页的行 —— 后者是
+ * 分页后的局部,拿它统计会随翻页乱跳。stats 与 page 在后端共用同一段数据范围
+ * 拼装逻辑,并同样接收 orderType / keyword,所以两者口径一致;
+ * 唯一切不掉的差别是 stats 不接受 status,这正是我们要的:切状态时各档数字保持稳定。
  */
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import PageHeader from '@/components/PageHeader.vue'
@@ -21,14 +26,17 @@ import {
   getStatusLabel,
   getStatusTone,
 } from '@/constants/workorder'
-import { MOCK_WORK_ORDERS, MOCK_USERS, mockWorkOrderPage } from '@/mock'
+import { fetchWorkOrderStats, pageWorkOrders } from '@/api'
+import { useUserDirectory } from '@/composables/useDirectories'
 import { formatRelative } from '@/utils/datetime'
 import { useUserStore } from '@/stores/user'
-import type { WorkOrderVO } from '@/types/domain'
+import type { WorkOrderStats, WorkOrderVO } from '@/types/domain'
 
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
+// 工单只带 userId / handlerId,姓名靠这份目录补齐(登录即可读;请求失败才回退成「用户 #id」)
+const { ensure: ensureUsers, nameOf } = useUserDirectory()
 
 const loading = ref(false)
 const rows = ref<WorkOrderVO[]>([])
@@ -42,50 +50,29 @@ const query = reactive({
   keyword: '',
 })
 
-/** 用户 id -> 姓名,表格里展示提单人/处理人 */
-const userMap = computed(() => {
-  const m = new Map<number, string>()
-  for (const u of MOCK_USERS) m.set(u.userId, u.realName)
-  return m
-})
-
-function userName(id: number | null): string {
-  if (id === null) return '—'
-  return userMap.value.get(id) ?? `用户 ${id}`
-}
+/** 空对象打底,免得接口没回来时 computed 里到处判空 */
+const stats = ref<WorkOrderStats>({ total: 0, statusCounts: [] })
 
 /**
  * 状态条数据:各状态的工单数。
- * 统计口径跟随「除状态外的其他筛选条件」,这样各状态数字之和等于不加状态筛选的总数,
- * 不会出现"点进去数量对不上"的困惑。
+ * 标签取本地常量表而不是后端 statusDesc,和页面其它地方(下拉框、筛选说明)
+ * 保持同一份文案;数量才用后端返回的。
  */
-const statusCounts = computed(() => {
-  const base = MOCK_WORK_ORDERS.filter((o) => {
-    if (query.orderType !== null && o.orderType !== query.orderType) return false
-    const kw = query.keyword.trim().toLowerCase()
-    if (kw && !o.title.toLowerCase().includes(kw) && !o.orderNo.toLowerCase().includes(kw)) return false
-    return true
-  })
-
-  return STATUS_OPTIONS.map((opt) => ({
+const statusCounts = computed(() =>
+  STATUS_OPTIONS.map((opt) => ({
     value: opt.value,
     label: opt.label,
     tone: getStatusTone(opt.value),
-    count: base.filter((o) => o.status === opt.value).length,
-  }))
-})
-
-const totalWithoutStatus = computed(() =>
-  statusCounts.value.reduce((sum, s) => sum + s.count, 0),
+    count: stats.value.statusCounts.find((s) => s.status === opt.value)?.count ?? 0,
+  })),
 )
 
-// TODO(api): 换成 GET /workorder/page
+const totalWithoutStatus = computed(() => stats.value.total)
+
 async function load() {
   loading.value = true
   try {
-    // 模拟网络延迟,让骨架/loading 态在页面上真实可见
-    await new Promise((r) => setTimeout(r, 180))
-    const res = mockWorkOrderPage({
+    const res = await pageWorkOrders({
       current: query.current,
       size: query.size,
       status: query.status,
@@ -94,9 +81,37 @@ async function load() {
     })
     rows.value = res.records
     total.value = res.total
+  } catch (e) {
+    ElMessage.error(e instanceof Error ? e.message : '工单列表加载失败')
   } finally {
     loading.value = false
   }
+}
+
+/**
+ * 刷新状态条。与 load() 分开:切状态只重查列表,状态条不动 ——
+ * 既省一次请求,也避免各档数字在点击的瞬间闪一下。
+ */
+async function loadStats() {
+  try {
+    stats.value = await fetchWorkOrderStats({
+      orderType: query.orderType,
+      keyword: query.keyword,
+    })
+  } catch {
+    // 状态条只是辅助,拿不到就退化成 0,不打断列表
+    stats.value = { total: 0, statusCounts: [] }
+  }
+}
+
+/**
+ * 关键词 / 类型变了:列表和状态条都要重查。
+ *
+ * 触发点全部显式调用,不用 watch 兜 —— 否则「重置」这类同时改多个字段的操作
+ * 会既触发 watch 又走显式调用,同一个查询发两三遍,响应还可能乱序覆盖。
+ */
+async function refreshBoth() {
+  await Promise.all([load(), loadStats()])
 }
 
 function resetFilters() {
@@ -104,36 +119,28 @@ function resetFilters() {
   query.orderType = null
   query.status = null
   query.current = 1
-  // 若上面几个字段本来就已经是空,watch 不会触发,所以这里显式再查一次
-  void load()
+  void refreshBoth()
 }
 
-/** 点状态条:再点一次取消筛选 */
+/** 点状态条:再点一次取消筛选。状态只影响列表,状态条数字保持不变 */
 function pickStatus(value: number) {
   query.status = query.status === value ? null : value
   query.current = 1
+  void load()
 }
 
 /** 「全部」:清掉状态筛选 */
 function clearStatus() {
   query.status = null
   query.current = 1
+  void load()
 }
 
 /** 回到第一页并重新查询,用于关键词/下拉框变更 */
 function search() {
   query.current = 1
-  void load()
+  void refreshBoth()
 }
-
-// 任一筛选条件变化都回到第一页,否则会停在一个不存在的页码上
-watch(
-  () => [query.status, query.orderType],
-  () => {
-    query.current = 1
-    void load()
-  },
-)
 
 function openDetail(row: WorkOrderVO) {
   router.push({ name: 'workorder-detail', params: { id: row.id } })
@@ -146,7 +153,8 @@ onMounted(() => {
     const n = Number(s)
     if (Number.isFinite(n)) query.status = n
   }
-  void load()
+  void ensureUsers()
+  void refreshBoth()
 })
 </script>
 
@@ -158,7 +166,7 @@ onMounted(() => {
       description="查看你有权限访问的全部工单,支持按状态、类型与关键词组合筛选。"
     >
       <template #actions>
-        <el-button @click="load">
+        <el-button @click="refreshBoth">
           <el-icon><Refresh /></el-icon>
           刷新
         </el-button>
@@ -215,11 +223,23 @@ onMounted(() => {
         </template>
       </el-input>
 
-      <el-select v-model="query.orderType" placeholder="全部类型" clearable class="filters__select">
+      <el-select
+        v-model="query.orderType"
+        placeholder="全部类型"
+        clearable
+        class="filters__select"
+        @change="search"
+      >
         <el-option v-for="t in ORDER_TYPE_OPTIONS" :key="t.value" :label="t.label" :value="t.value" />
       </el-select>
 
-      <el-select v-model="query.status" placeholder="全部状态" clearable class="filters__select">
+      <el-select
+        v-model="query.status"
+        placeholder="全部状态"
+        clearable
+        class="filters__select"
+        @change="search"
+      >
         <el-option v-for="s in STATUS_OPTIONS" :key="s.value" :label="s.label" :value="s.value" />
       </el-select>
 
@@ -268,14 +288,14 @@ onMounted(() => {
 
         <el-table-column label="提单人" width="112">
           <template #default="{ row }">
-            <span class="wo-text-2">{{ userName(row.userId) }}</span>
+            <span class="wo-text-2">{{ nameOf(row.userId) }}</span>
           </template>
         </el-table-column>
 
         <el-table-column label="处理人" width="112">
           <template #default="{ row }">
             <span :class="row.handlerId === null ? 'wo-text-3' : 'wo-text-2'">
-              {{ userName(row.handlerId) }}
+              {{ nameOf(row.handlerId) }}
             </span>
           </template>
         </el-table-column>

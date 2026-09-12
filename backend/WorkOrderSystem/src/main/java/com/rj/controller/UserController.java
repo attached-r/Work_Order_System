@@ -10,6 +10,7 @@ import com.rj.model.dto.RegisterDTO;
 import com.rj.model.dto.ResetPasswordDTO;
 import com.rj.model.dto.UpdateUserDTO;
 import com.rj.model.dto.UpdateUserStatusDTO;
+import com.rj.model.vo.UserBriefVO;
 import com.rj.model.vo.UserVO;
 import com.rj.service.IUserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -25,6 +26,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @Tag(name="用户管理")
 @RequestMapping("/user")
@@ -64,14 +67,33 @@ public class UserController {
 
     /**
      * 用户分页列表,用于管理端选人。
+     * <p>
+     * 四个筛选条件都可缺省,全部为空时与不带筛选完全一致。筛选一律在服务端做,
+     * 前端只筛当前页会算出错误的条数与总数。
      */
     @Operation(summary = "用户分页列表")
     @RequiresPermission("user:manage")
     @GetMapping("/page")
     public Result<PageResult<UserVO>> page(@RequestParam(defaultValue = "1") long current,
                                            @RequestParam(defaultValue = "10") long size,
-                                           @RequestParam(required = false) String keyword) {
-        return Result.success(userService.pageUsers(current, size, keyword));
+                                           @RequestParam(required = false) String keyword,
+                                           @RequestParam(required = false) Long departmentId,
+                                           @RequestParam(required = false) Integer status,
+                                           @RequestParam(required = false) String roleCode) {
+        return Result.success(userService.pageUsers(current, size, keyword, departmentId, status, roleCode));
+    }
+
+    /**
+     * 用户只读目录,把工单里的裸用户ID解析成姓名,并给派单下拉提供候选人。
+     * <p>
+     * <b>刻意不挂 {@code @RequiresPermission}:</b>派单人可能只有 {@code workorder:dispatch}
+     * 而没有 {@code user:manage},若沿用分页接口取候选人,这个角色根本派不了单。
+     * 不加注解即"登录即可"——拦截器仍会校验 token,只是不要求额外权限码。
+     */
+    @Operation(summary = "用户目录")
+    @GetMapping("/directory")
+    public Result<List<UserBriefVO>> directory() {
+        return Result.success(userService.listDirectory());
     }
 
     /**

@@ -13,7 +13,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowDown, Expand, Fold, SwitchButton } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { useAppStore } from '@/stores/app'
-import { getRoleName } from '@/mock'
+import { getRoleName } from '@/constants/role'
 
 const route = useRoute()
 const router = useRouter()
