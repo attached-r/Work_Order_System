@@ -43,6 +43,7 @@ declare module 'vue' {
     ElTag: typeof import('element-plus/es')['ElTag']
     ElTimeline: typeof import('element-plus/es')['ElTimeline']
     ElTimelineItem: typeof import('element-plus/es')['ElTimelineItem']
+    ElTree: typeof import('element-plus/es')['ElTree']
     PageHeader: typeof import('./../components/PageHeader.vue')['default']
     PriorityTag: typeof import('./../components/PriorityTag.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']

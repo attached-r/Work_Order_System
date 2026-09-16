@@ -93,6 +93,10 @@
             <artifactId>knife4j-openapi3-boot4-spring-boot-starter</artifactId>
             <version>5.6.0</version>
         </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
     </dependencies>
 
     <build>

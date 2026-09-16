@@ -15,7 +15,11 @@
  * permCode 的命名空间补出来,见 groupedTree。
  */
 import { computed, nextTick, onMounted, ref } from 'vue'
-import { ElMessage, ElMessageBox, ElTree } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
+// ⚠️ 这里绝不能 import ElTree 这个「值」:一旦显式导入,unplugin 的 resolver 就
+// 认不出模板里的 <el-tree>,tree.scss 不会被按需注入 —— 树会塌成没有 flex 的裸布局,
+// 复选框和节点文字叠在一起。只需要它的实例类型,所以用 type-only 导入。
+import type { TreeInstance } from 'element-plus'
 import PageHeader from '@/components/PageHeader.vue'
 import { assignPermissions, fetchPermissionTree, listRolePermissions, listRoles } from '@/api'
 import type { PermissionVO, Role } from '@/types/domain'
@@ -88,7 +92,7 @@ const allPermIds = computed(() => permissions.value.map((p) => p.id))
 const drawerVisible = ref(false)
 const drawerSubmitting = ref(false)
 const currentRole = ref<Role | null>(null)
-const treeRef = ref<InstanceType<typeof ElTree>>()
+const treeRef = ref<TreeInstance>()
 
 /** 是否已经读回该角色的权限。false 时树不渲染,避免空树先闪一下 */
 const permLoaded = ref(false)

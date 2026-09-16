@@ -243,6 +243,32 @@
   }
 }
 
+// 确认框(ElMessageBox):和 .el-dialog 同一套语言,只是小一号。
+// 它的圆角/阴影是 EP 里少数几个写死不走 $border-radius 的地方,必须显式接管。
+.el-message-box {
+  --el-messagebox-border-radius: var(--wo-radius-lg);
+  --el-messagebox-box-shadow: var(--wo-shadow-lg);
+  --el-messagebox-title-color: var(--wo-ink-1);
+  --el-messagebox-content-color: var(--wo-ink-2);
+  --el-messagebox-font-size: 16px;
+
+  border: 1px solid var(--wo-hairline);
+  padding: 18px 20px 16px;
+
+  .el-message-box__header {
+    padding-bottom: 10px;
+  }
+
+  .el-message-box__title {
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .el-message-box__btns {
+    padding-top: 16px;
+  }
+}
+
 // 遮罩:极淡的蓝灰,不是纯黑
 .el-overlay {
   background-color: rgba(22, 32, 46, 0.32);
