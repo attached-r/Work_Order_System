@@ -1,7 +1,6 @@
 "# Work_Order_System" 
 
 ## 状态流转图
-
 ```mermaid
 stateDiagram-v2
     state "0 待审核" as S0
