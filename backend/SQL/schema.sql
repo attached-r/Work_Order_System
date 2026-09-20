@@ -256,3 +256,32 @@ CREATE TABLE `mq_message_reliability`
     KEY `idx_status_retry` (`status`, `next_retry_time`) COMMENT '补偿 Job 扫描'
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4 COMMENT ='MQ 消息可靠性表';
+
+
+-- ---------------------------------------------------------------------
+-- 12. notification 站内通知(只增,仅读状态可变)
+--     幂等键 uk_msg_user: 同一消息对同一收件人只落一行;
+--     idx_user_read_time 同时服务收件箱列表与未读数计数。
+-- ---------------------------------------------------------------------
+DROP TABLE IF EXISTS `notification`;
+CREATE TABLE `notification`
+(
+    `id`          BIGINT        NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `msg_id`      VARCHAR(64)   NOT NULL COMMENT '来源消息ID(mq_message_reliability.msg_id)',
+    `user_id`     BIGINT        NOT NULL COMMENT '收件人ID(user.id)',
+    `biz_type`    VARCHAR(50)   NOT NULL DEFAULT 'workorder_notify' COMMENT '业务类型',
+    `biz_id`      VARCHAR(64)            DEFAULT NULL COMMENT '业务单据ID(工单ID),可空',
+    `order_no`    VARCHAR(32)            DEFAULT NULL COMMENT '工单编号快照,收件箱免 join',
+    `notify_type` TINYINT       NOT NULL COMMENT '通知类型:1提交 2审核通过 3审核驳回 4派单 5处理完成 6验收通过 7退回处理 8转派 9撤回/取消 10超时关闭',
+    `channel`     TINYINT       NOT NULL DEFAULT 1 COMMENT '渠道:1站内信 2邮件 3短信(预留)',
+    `title`       VARCHAR(200)  NOT NULL COMMENT '通知标题(已渲染)',
+    `content`     VARCHAR(1000)          DEFAULT NULL COMMENT '通知正文(已渲染),可空',
+    `read_flag`   TINYINT       NOT NULL DEFAULT 0 COMMENT '读取状态:0未读 1已读',
+    `read_time`   DATETIME               DEFAULT NULL COMMENT '首次标记已读时间,可空',
+    `create_time` DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '产生时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_msg_user` (`msg_id`, `user_id`),
+    KEY `idx_user_read_time` (`user_id`, `read_flag`, `create_time`) COMMENT '收件箱列表+未读数',
+    KEY `idx_biz` (`biz_type`, `biz_id`)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4 COMMENT ='站内通知表';

@@ -21,7 +21,35 @@ spring:
       password: ${REDIS_PASSWORD:20050603RJ}
       database: 4
       timeout: 10000  #
-
+  # 配置RabbitMQ
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: ${RABBITMQ_PASSWORD:guest}
+    virtual-host: /
+    connection-timeout: 5s
+    # 生产者确认: correlated = 发 confirmation 并在 CorrelationData 上可取结果
+    publisher-confirm-type: correlated
+    # 不可路由的消息回退给发送方(配合 template.mandatory)
+    publisher-returns: true
+    template:
+      mandatory: true
+    listener:
+      simple:
+        # 手动 ACK: 由消费端代码决定 ack/nack,不靠容器猜测
+        acknowledge-mode: manual
+        prefetch: 10
+        concurrency: 2
+        max-concurrency: 4
+        # 重试耗尽后不无限 requeue,交给 DLX
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          initial-interval: 1s
+          multiplier: 2.0
+          max-interval: 10s
+          max-retries: 3
 
 # jwt配置
 jwt:
