@@ -762,6 +762,59 @@
         }
       }
     },
+    "/notification/{id}/read": {
+      "post": {
+        "tags": [
+          "通知中心"
+        ],
+        "summary": "标记已读",
+        "operationId": "markRead",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultVoid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notification/read-all": {
+      "post": {
+        "tags": [
+          "通知中心"
+        ],
+        "summary": "全部已读",
+        "operationId": "markAllRead",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultInteger"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/department": {
       "post": {
         "tags": [
@@ -1088,6 +1141,81 @@
               "*/*": {
                 "schema": {
                   "$ref": "#/components/schemas/ResultListPermissionVO"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notification/unread-count": {
+      "get": {
+        "tags": [
+          "通知中心"
+        ],
+        "summary": "未读通知数",
+        "operationId": "unreadCount",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultLong"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notification/page": {
+      "get": {
+        "tags": [
+          "通知中心"
+        ],
+        "summary": "分页收件箱",
+        "operationId": "page_2",
+        "parameters": [
+          {
+            "name": "current",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "default": 1,
+              "minimum": 1
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "default": 10,
+              "minimum": 1
+            }
+          },
+          {
+            "name": "readFlag",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultPageResultNotificationVO"
                 }
               }
             }
@@ -1559,6 +1687,26 @@
           },
           "data": {
             "type": "string"
+          },
+          "timestamp": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "ResultInteger": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "integer",
+            "format": "int32"
           },
           "timestamp": {
             "type": "integer",
@@ -2225,6 +2373,108 @@
             "items": {
               "$ref": "#/components/schemas/PermissionVO"
             }
+          },
+          "timestamp": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "NotificationVO": {
+        "type": "object",
+        "description": "站内信通知(收件箱项)",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "description": "通知ID"
+          },
+          "notifyType": {
+            "type": "integer",
+            "format": "int32",
+            "description": "类型码 1-10,取值同工单操作事件"
+          },
+          "notifyTypeDesc": {
+            "type": "string",
+            "description": "类型中文,如「审核驳回」"
+          },
+          "channel": {
+            "type": "integer",
+            "format": "int32",
+            "description": "渠道:1站内信 2邮件 3短信"
+          },
+          "title": {
+            "type": "string",
+            "description": "标题(已渲染)"
+          },
+          "content": {
+            "type": "string",
+            "description": "正文(已渲染)"
+          },
+          "bizType": {
+            "type": "string",
+            "description": "业务类型:workorder_notify"
+          },
+          "bizId": {
+            "type": "string",
+            "description": "业务ID(工单ID),前端用于跳转工单详情"
+          },
+          "orderNo": {
+            "type": "string",
+            "description": "工单编号"
+          },
+          "readFlag": {
+            "type": "integer",
+            "format": "int32",
+            "description": "0未读 1已读"
+          },
+          "readTime": {
+            "type": "string",
+            "format": "date-time",
+            "description": "已读时间,可空"
+          },
+          "createTime": {
+            "type": "string",
+            "format": "date-time",
+            "description": "产生时间"
+          }
+        }
+      },
+      "PageResultNotificationVO": {
+        "type": "object",
+        "properties": {
+          "records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NotificationVO"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "current": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "ResultPageResultNotificationVO": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/PageResultNotificationVO"
           },
           "timestamp": {
             "type": "integer",

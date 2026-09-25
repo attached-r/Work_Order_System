@@ -95,5 +95,17 @@ public class OpenApiConfig {
                 .pathsToMatch("/workorder/**")
                 .build();
     }
+
+    /**
+     * 分组配置：路径匹配
+     * @return 通知中心分组(模块三:站内信收件箱)
+     */
+    @Bean
+    public GroupedOpenApi notificationOpenApi(){
+        return GroupedOpenApi.builder()
+                .group("通知中心")
+                .pathsToMatch("/notification/**")
+                .build();
+    }
     // 诸如上述 需要分组再编写
 }

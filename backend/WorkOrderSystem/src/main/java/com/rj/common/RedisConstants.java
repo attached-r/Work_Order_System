@@ -27,4 +27,18 @@ public final class RedisConstants {
      * jwt.timeout = 7200s = 2h。登录与拦截器滑动续期都用该值。
      */
     public static final long LOGIN_TOKEN_EXPIRE_HOURS = 2L;
+
+    /**
+     * 未读通知数缓存 key 前缀,完整 key: notify:unread:{userId}
+     * value 为未读条数的字符串。策略是「写失效 + TTL 兜底」,不用 INCR:
+     * DEL 是幂等的,不可能算错;最坏情况只是下次读回源一次(索引覆盖计数,亚毫秒)。
+     * 失效时机:① 消费端实际插入 >0 行时对该批收件人逐个 DEL;② 标记已读后 DEL 自己。
+     */
+    public static final String NOTIFY_UNREAD_KEY = "notify:unread:";
+
+    /**
+     * 未读通知数缓存过期时间(秒)。DEL 失败(Redis 抖动)时靠它自愈,
+     * 最坏是 5 分钟的未读数滞后。
+     */
+    public static final long NOTIFY_UNREAD_EXPIRE_SECONDS = 300L;
 }

@@ -201,6 +201,49 @@ export interface WorkOrderResourceForm {
   remark: string | null
 }
 
+// ---------------------------------------------------------------------------
+// 通知中心
+// ---------------------------------------------------------------------------
+
+/**
+ * 站内信通知(收件箱项),对应后端 NotificationVO。
+ *
+ * 三处后端实际行为,照接口文档猜会踩:
+ *   - `notifyType` 复用工单操作事件码(OperateType,1-10),不是通知自己的一套枚举;
+ *   - `notifyTypeDesc` 后端**可能回 null**(遇到未知码时只记日志、不让整页报错),
+ *     所以展示必须能回落到本地枚举表;
+ *   - `bizId` 是工单ID的字符串形式,点开跳详情用它;`orderNo` 只用于展示。
+ *     两者都来自消息快照,理论上都可能为空,跳转前必须判。
+ *
+ * `title` / `content` 是后端落库时就渲染好的成品文本,前端不做任何模板替换。
+ */
+export interface NotificationVO {
+  id: number
+  notifyType: number
+  notifyTypeDesc: string | null
+  /** 渠道:1站内信 2邮件 3短信。后端本期只落 1 */
+  channel: number
+  title: string
+  content: string
+  /** 业务类型,当前恒为 'workorder_notify' */
+  bizType: string | null
+  /** 业务ID(工单ID),字符串形式 */
+  bizId: string | null
+  orderNo: string | null
+  /** 0未读 1已读 */
+  readFlag: number
+  readTime: string | null
+  createTime: string
+}
+
+/** 通知分页查询参数 */
+export interface NotificationQuery {
+  current: number
+  size: number
+  /** 不传=全部,0=未读,1=已读(request 层会把 null 整个丢掉) */
+  readFlag?: number | null
+}
+
 /** 用户列表查询参数 */
 export interface UserQuery {
   current: number

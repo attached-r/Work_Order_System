@@ -1,9 +1,12 @@
 > **OAS 3.1 不完整导出**
-> 有 5 个语义问题无法完整表示。
+> 有 8 个语义问题无法完整表示。
 > - PUT /user/{userId}/roles · requestBody · UNREPRESENTABLE_KEYWORD (minItems)
-> - GET /permission/tree · response 200 example · SEARCH_BUDGET_EXCEEDED
+> - GET /user/directory · response 200 example · SEARCH_BUDGET_EXCEEDED
+> - GET /workorder/stats · response 200 example · SEARCH_BUDGET_EXCEEDED
 > - GET /workorder/{id} · response 200 example · SEARCH_BUDGET_EXCEEDED
 > - GET /workorder/page · response 200 example · SEARCH_BUDGET_EXCEEDED
+> - GET /permission/tree · response 200 example · SEARCH_BUDGET_EXCEEDED
+> - GET /notification/page · response 200 example · SEARCH_BUDGET_EXCEEDED
 > - GET /user/page · response 200 example · SEARCH_BUDGET_EXCEEDED
 
 # 智能工单系统 API
@@ -41,7 +44,7 @@
 | 字段名 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
 | `realName` | string | 是 | 真实姓名 |
-| `phone` | string | 否 | 联系电话,可空 |
+| `phone` | string | 否 | 联系电话;传空字符串表示清空,不传(null)表示不修改 |
 | `departmentId` | integer/int64 | 否 | 所属部门ID,可空表示不调整 |
 
 #### 请求示例
@@ -610,6 +613,9 @@ _无请求参数_
 | `current` | query | integer/int64 | 否 |  |
 | `size` | query | integer/int64 | 否 |  |
 | `keyword` | query | string | 否 |  |
+| `departmentId` | query | integer/int64 | 否 |  |
+| `status` | query | integer/int32 | 否 |  |
+| `roleCode` | query | string | 否 |  |
 
 #### 请求参数 `current`
 
@@ -632,6 +638,36 @@ _无请求参数_
 ```
 
 #### 请求参数 `keyword`
+
+**类型:** `string`
+
+##### 请求示例
+
+```
+
+```
+
+#### 请求参数 `departmentId`
+
+**类型:** `integer/int64`
+
+##### 请求示例
+
+```
+0
+```
+
+#### 请求参数 `status`
+
+**类型:** `integer/int32`
+
+##### 请求示例
+
+```
+0
+```
+
+#### 请求参数 `roleCode`
 
 **类型:** `string`
 
@@ -667,6 +703,7 @@ _无请求体_
 | `data.records[].realName` | string | 否 | 真实姓名 |
 | `data.records[].departmentId` | integer/int64 | 否 | 所属部门id |
 | `data.records[].departmentName` | string | 否 | 所属部门名称 |
+| `data.records[].phone` | string | 否 | 联系电话,未填写时为空 |
 | `data.records[].status` | integer/int32 | 否 | 状态：1启用 0停用 |
 | `data.records[].roles` | string[] | 否 | 角色标识列表,如 SUBMITTER |
 | `data.records[].roles[]` | string | 否 |  |
@@ -711,6 +748,7 @@ _无请求体_
 | `data.realName` | string | 否 | 真实姓名 |
 | `data.departmentId` | integer/int64 | 否 | 所属部门id |
 | `data.departmentName` | string | 否 | 所属部门名称 |
+| `data.phone` | string | 否 | 联系电话,未填写时为空 |
 | `data.status` | integer/int32 | 否 | 状态：1启用 0停用 |
 | `data.roles` | string[] | 否 | 角色标识列表,如 SUBMITTER |
 | `data.roles[]` | string | 否 |  |
@@ -732,6 +770,7 @@ _无请求体_
     "realName": "",
     "departmentId": 0,
     "departmentName": "",
+    "phone": "",
     "status": 0,
     "roles": [],
     "perms": []
@@ -742,7 +781,104 @@ _无请求体_
 
 ---
 
+## 用户目录
+
+**GET** `/user/directory`
+
+### 请求参数
+
+_无请求参数_
+
+### 请求体
+
+_无请求体_
+
+### 响应结构
+
+| 状态码 | 说明 | Schema |
+| --- | --- | --- |
+| 200 | OK | ResultListUserBriefVO |
+
+#### 状态码 `200`
+
+**Content-Type:** `*/*` · **类型:** `ResultListUserBriefVO`
+
+| 字段名 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `code` | integer/int32 | 否 |  |
+| `message` | string | 否 |  |
+| `data` | UserBriefVO[] | 否 |  |
+| `data[]` | UserBriefVO | 否 | 用户只读目录项(不含权限码) |
+| `data[].userId` | integer/int64 | 否 | 用户id |
+| `data[].username` | string | 否 | 用户名 |
+| `data[].realName` | string | 否 | 真实姓名(前端展示用) |
+| `data[].departmentId` | integer/int64 | 否 | 所属部门id;null 表示未归属部门 |
+| `data[].departmentName` | string | 否 | 所属部门名称 |
+| `data[].status` | integer/int32 | 否 | 状态:1启用 0停用 |
+| `data[].roles` | string[] | 否 | 角色标识列表,如 HANDLER |
+| `data[].roles[]` | string | 否 |  |
+| `timestamp` | integer/int64 | 否 |  |
+
+---
+
 # 角色管理
+
+## 角色已分配权限ID列表
+
+**GET** `/role/{roleId}/permissions`
+
+### 请求参数
+
+| 参数名 | 位置 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- | --- |
+| `roleId` | path | integer/int64 | 是 |  |
+
+#### 请求参数 `roleId`
+
+**类型:** `integer/int64`
+
+##### 请求示例
+
+```
+0
+```
+
+### 请求体
+
+_无请求体_
+
+### 响应结构
+
+| 状态码 | 说明 | Schema |
+| --- | --- | --- |
+| 200 | OK | ResultListLong |
+
+#### 状态码 `200`
+
+**Content-Type:** `*/*` · **类型:** `ResultListLong`
+
+| 字段名 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `code` | integer/int32 | 否 |  |
+| `message` | string | 否 |  |
+| `data` | integer/int64[] | 否 |  |
+| `data[]` | integer/int64 | 否 |  |
+| `timestamp` | integer/int64 | 否 |  |
+
+#### 响应示例 `200`
+
+**Content-Type:** `*/*`
+
+```
+{
+  "code": 0,
+  "message": "",
+  "data": [],
+  "timestamp": 0
+}
+```
+
+---
 
 ## 分配权限
 
@@ -1092,6 +1228,54 @@ _无请求体_
 | `data[].deptName` | string | 否 | 部门名称 |
 | `data[].remark` | string | 否 | 备注 |
 | `data[].createTime` | string/date-time | 否 | 创建时间 |
+| `timestamp` | integer/int64 | 否 |  |
+
+#### 响应示例 `200`
+
+**Content-Type:** `*/*`
+
+```
+{
+  "code": 0,
+  "message": "",
+  "data": [],
+  "timestamp": 0
+}
+```
+
+---
+
+## 部门目录
+
+**GET** `/department/directory`
+
+### 请求参数
+
+_无请求参数_
+
+### 请求体
+
+_无请求体_
+
+### 响应结构
+
+| 状态码 | 说明 | Schema |
+| --- | --- | --- |
+| 200 | OK | ResultListDepartmentBriefVO |
+
+#### 状态码 `200`
+
+**Content-Type:** `*/*` · **类型:** `ResultListDepartmentBriefVO`
+
+| 字段名 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `code` | integer/int32 | 否 |  |
+| `message` | string | 否 |  |
+| `data` | DepartmentBriefVO[] | 否 |  |
+| `data[]` | DepartmentBriefVO | 否 | 部门只读目录项 |
+| `data[].id` | integer/int64 | 否 | 部门id |
+| `data[].deptCode` | string | 否 | 部门编码 |
+| `data[].deptName` | string | 否 | 部门名称 |
 | `timestamp` | integer/int64 | 否 |  |
 
 #### 响应示例 `200`
@@ -1706,6 +1890,66 @@ _无请求体_
 
 ---
 
+## 工单统计
+
+**GET** `/workorder/stats`
+
+### 请求参数
+
+| 参数名 | 位置 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- | --- |
+| `orderType` | query | integer/int32 | 否 |  |
+| `keyword` | query | string | 否 |  |
+
+#### 请求参数 `orderType`
+
+**类型:** `integer/int32`
+
+##### 请求示例
+
+```
+0
+```
+
+#### 请求参数 `keyword`
+
+**类型:** `string`
+
+##### 请求示例
+
+```
+
+```
+
+### 请求体
+
+_无请求体_
+
+### 响应结构
+
+| 状态码 | 说明 | Schema |
+| --- | --- | --- |
+| 200 | OK | ResultWorkOrderStatsVO |
+
+#### 状态码 `200`
+
+**Content-Type:** `*/*` · **类型:** `ResultWorkOrderStatsVO`
+
+| 字段名 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `code` | integer/int32 | 否 |  |
+| `message` | string | 否 |  |
+| `data` | WorkOrderStatsVO | 否 | 工单统计 |
+| `data.total` | integer/int64 | 否 | 当前可见范围内的工单总数 |
+| `data.statusCounts` | StatusCount[] | 否 | 各状态工单数,含数量为 0 的状态,按状态码升序 |
+| `data.statusCounts[]` | StatusCount | 否 | 状态计数 |
+| `data.statusCounts[].status` | integer/int32 | 否 | 状态码 0-7 |
+| `data.statusCounts[].statusDesc` | string | 否 | 状态名称 |
+| `data.statusCounts[].count` | integer/int64 | 否 | 该状态下的工单数 |
+| `timestamp` | integer/int64 | 否 |  |
+
+---
+
 ## 工单分页列表
 
 **GET** `/workorder/page`
@@ -1804,6 +2048,234 @@ _无请求体_
 | `data.records[].createTime` | string/date-time | 否 | 创建时间 |
 | `data.records[].updateTime` | string/date-time | 否 | 更新时间 |
 | `data.records[].expireTime` | string/date-time | 否 | 超时时间 |
+| `data.total` | integer/int64 | 否 |  |
+| `data.current` | integer/int64 | 否 |  |
+| `data.size` | integer/int64 | 否 |  |
+| `timestamp` | integer/int64 | 否 |  |
+
+---
+
+# 通知中心
+
+## 标记已读
+
+**POST** `/notification/{id}/read`
+
+### 请求参数
+
+| 参数名 | 位置 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- | --- |
+| `id` | path | integer/int64 | 是 |  |
+
+#### 请求参数 `id`
+
+**类型:** `integer/int64`
+
+##### 请求示例
+
+```
+0
+```
+
+### 请求体
+
+_无请求体_
+
+### 响应结构
+
+| 状态码 | 说明 | Schema |
+| --- | --- | --- |
+| 200 | OK | ResultVoid |
+
+#### 状态码 `200`
+
+**Content-Type:** `*/*` · **类型:** `ResultVoid`
+
+| 字段名 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `code` | integer/int32 | 否 |  |
+| `message` | string | 否 |  |
+| `data` | unknown | 否 |  |
+| `timestamp` | integer/int64 | 否 |  |
+
+#### 响应示例 `200`
+
+**Content-Type:** `*/*`
+
+```
+{
+  "code": 0,
+  "message": "",
+  "data": {},
+  "timestamp": 0
+}
+```
+
+---
+
+## 全部已读
+
+**POST** `/notification/read-all`
+
+### 请求参数
+
+_无请求参数_
+
+### 请求体
+
+_无请求体_
+
+### 响应结构
+
+| 状态码 | 说明 | Schema |
+| --- | --- | --- |
+| 200 | OK | ResultInteger |
+
+#### 状态码 `200`
+
+**Content-Type:** `*/*` · **类型:** `ResultInteger`
+
+| 字段名 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `code` | integer/int32 | 否 |  |
+| `message` | string | 否 |  |
+| `data` | integer/int32 | 否 |  |
+| `timestamp` | integer/int64 | 否 |  |
+
+#### 响应示例 `200`
+
+**Content-Type:** `*/*`
+
+```
+{
+  "code": 0,
+  "message": "",
+  "data": 0,
+  "timestamp": 0
+}
+```
+
+---
+
+## 未读通知数
+
+**GET** `/notification/unread-count`
+
+### 请求参数
+
+_无请求参数_
+
+### 请求体
+
+_无请求体_
+
+### 响应结构
+
+| 状态码 | 说明 | Schema |
+| --- | --- | --- |
+| 200 | OK | ResultLong |
+
+#### 状态码 `200`
+
+**Content-Type:** `*/*` · **类型:** `ResultLong`
+
+| 字段名 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `code` | integer/int32 | 否 |  |
+| `message` | string | 否 |  |
+| `data` | integer/int64 | 否 |  |
+| `timestamp` | integer/int64 | 否 |  |
+
+#### 响应示例 `200`
+
+**Content-Type:** `*/*`
+
+```
+{
+  "code": 0,
+  "message": "",
+  "data": 0,
+  "timestamp": 0
+}
+```
+
+---
+
+## 分页收件箱
+
+**GET** `/notification/page`
+
+### 请求参数
+
+| 参数名 | 位置 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- | --- |
+| `current` | query | integer/int64 | 否 |  |
+| `size` | query | integer/int64 | 否 |  |
+| `readFlag` | query | integer/int32 | 否 |  |
+
+#### 请求参数 `current`
+
+**类型:** `integer/int64`
+
+##### 请求示例
+
+```
+1
+```
+
+#### 请求参数 `size`
+
+**类型:** `integer/int64`
+
+##### 请求示例
+
+```
+10
+```
+
+#### 请求参数 `readFlag`
+
+**类型:** `integer/int32`
+
+##### 请求示例
+
+```
+0
+```
+
+### 请求体
+
+_无请求体_
+
+### 响应结构
+
+| 状态码 | 说明 | Schema |
+| --- | --- | --- |
+| 200 | OK | ResultPageResultNotificationVO |
+
+#### 状态码 `200`
+
+**Content-Type:** `*/*` · **类型:** `ResultPageResultNotificationVO`
+
+| 字段名 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `code` | integer/int32 | 否 |  |
+| `message` | string | 否 |  |
+| `data` | PageResultNotificationVO | 否 |  |
+| `data.records` | NotificationVO[] | 否 |  |
+| `data.records[]` | NotificationVO | 否 | 站内信通知(收件箱项) |
+| `data.records[].id` | integer/int64 | 否 | 通知ID |
+| `data.records[].notifyType` | integer/int32 | 否 | 类型码 1-10,取值同工单操作事件 |
+| `data.records[].notifyTypeDesc` | string | 否 | 类型中文,如「审核驳回」 |
+| `data.records[].channel` | integer/int32 | 否 | 渠道:1站内信 2邮件 3短信 |
+| `data.records[].title` | string | 否 | 标题(已渲染) |
+| `data.records[].content` | string | 否 | 正文(已渲染) |
+| `data.records[].bizType` | string | 否 | 业务类型:workorder_notify |
+| `data.records[].bizId` | string | 否 | 业务ID(工单ID),前端用于跳转工单详情 |
+| `data.records[].orderNo` | string | 否 | 工单编号 |
+| `data.records[].readFlag` | integer/int32 | 否 | 0未读 1已读 |
+| `data.records[].readTime` | string/date-time | 否 | 已读时间,可空 |
+| `data.records[].createTime` | string/date-time | 否 | 产生时间 |
 | `data.total` | integer/int64 | 否 |  |
 | `data.current` | integer/int64 | 否 |  |
 | `data.size` | integer/int64 | 否 |  |

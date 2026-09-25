@@ -79,6 +79,14 @@ export const routes: RouteRecordRaw[] = [
         },
       },
       {
+        // 刻意不设 perm:后端通知接口只要求登录,收件箱的数据范围由服务端按
+        // token 里的 userId 收敛。这里若挂个权限码,反而会把普通提单人挡在门外。
+        path: 'notification',
+        name: 'notification-list',
+        component: () => import('@/views/notification/NotificationListView.vue'),
+        meta: { title: '消息通知', icon: 'Bell' },
+      },
+      {
         path: 'system',
         name: 'system',
         redirect: '/system/user',

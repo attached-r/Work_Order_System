@@ -51,6 +51,25 @@ spring:
           max-interval: 10s
           max-retries: 3
 
+# 异步通知(模块三):本机没有 broker 时把 enabled 置为 false 即可正常启动,
+# 此时补偿任务把待发送消息留在 outbox(status=0),不做投递
+mq:
+  notify:
+    enabled: true
+    exchange: workorder.notify.exchange
+    queue: workorder.notify.queue
+    routing-key-prefix: workorder.notify.
+    dead-letter-exchange: workorder.notify.dlx
+    dead-letter-queue: workorder.notify.dlq
+    dead-letter-routing-key: workorder.notify.dead
+    confirm-timeout-seconds: 3
+    compensation:
+      enabled: true
+      scan-delay-ms: 30000
+      batch-size: 200
+      max-retry: 5
+      backoff-seconds: 30
+
 # jwt配置
 jwt:
   secret: iluhmq #签名密钥

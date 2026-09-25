@@ -26,6 +26,8 @@ import com.rj.model.pojo.WorkOrderResource;
 import com.rj.model.vo.WorkOrderDetailVO;
 import com.rj.model.vo.WorkOrderStatsVO;
 import com.rj.model.vo.WorkOrderVO;
+import com.rj.mq.NotifyMessage;
+import com.rj.mq.NotifyOutboxWriter;
 import com.rj.service.IWorkOrderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +38,7 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -90,6 +93,7 @@ public class WorkOrderService implements IWorkOrderService {
     private final WorkOrderResourceMapper workOrderResourceMapper;
     private final WorkOrderOperateLogMapper workOrderOperateLogMapper;
     private final UserMapper userMapper;
+    private final NotifyOutboxWriter notifyOutboxWriter;
 
     /**
      * 创建工单:主表与资源明细在同一事务写入,任一失败整体回滚。
@@ -135,6 +139,10 @@ public class WorkOrderService implements IWorkOrderService {
         // 首次提交:from_status 为空,to_status 为「待审核」
         insertLog(order.getId(), userId, OperateType.SUBMIT, null,
                 WorkOrderStatus.PENDING_REVIEW.getCode(), null, "提交工单");
+        // 触点①:创建绕过了 transition(),必须单独接通知。此时尚未派单,handlerId 传 null
+        notifyOutboxWriter.stage(NotifyMessage.of(order.getId(), order.getOrderNo(), order.getTitle(),
+                order.getDepartmentId(), order.getUserId(), null, userId, OperateType.SUBMIT,
+                null, WorkOrderStatus.PENDING_REVIEW.getCode(), "提交工单"));
         log.info("创建工单: id={}, orderNo={}, userId={}", order.getId(), order.getOrderNo(), userId);
         return order.getId();
     }
@@ -355,6 +363,7 @@ public class WorkOrderService implements IWorkOrderService {
                 .last("LIMIT " + TIMEOUT_BATCH_SIZE));
 
         int closed = 0;
+        List<NotifyMessage> notices = new ArrayList<>(candidates.size());
         for (WorkOrder order : candidates) {
             WorkOrderStatus current = WorkOrderStatus.fromCode(order.getStatus());
             if (!current.canTransitionTo(WorkOrderStatus.TIMEOUT)) {
@@ -369,8 +378,16 @@ public class WorkOrderService implements IWorkOrderService {
             }
             insertLog(order.getId(), SYSTEM_OPERATOR_ID, OperateType.TIMEOUT_CLOSE,
                     current.getCode(), WorkOrderStatus.TIMEOUT.getCode(), null, order.getRemark());
+            // 触点③:系统行为,操作人记为 0(排除操作人这一步据实为空操作)
+            notices.add(NotifyMessage.of(order.getId(), order.getOrderNo(), order.getTitle(),
+                    order.getDepartmentId(), order.getUserId(), order.getHandlerId(),
+                    SYSTEM_OPERATOR_ID, OperateType.TIMEOUT_CLOSE,
+                    current.getCode(), WorkOrderStatus.TIMEOUT.getCode(), order.getRemark()));
             closed++;
         }
+        // 落库逐条(幂等键需要与工单一一对应),但只抛一个事件携带整批,
+        // 让发送侧把 N 条合并成一次批量投递(见设计文档 9.3)
+        notifyOutboxWriter.stage(notices);
         if (closed > 0) {
             log.info("工单超时自动关闭: 本轮关闭 {} 条", closed);
         }
@@ -430,6 +447,13 @@ public class WorkOrderService implements IWorkOrderService {
 
         insertLog(order.getId(), UserContext.getUserId(), operateType,
                 current.getCode(), target.getCode(), toUserId, remark);
+        // 触点②:7 个入口(resubmit/review/dispatch/transfer/process/accept/withdraw)的唯一汇聚点。
+        // 顺序陷阱:必须放在这里——此时 order 上的 status/handlerId 才是新值。
+        // 派单/转派的收件人就是 handlerId,读早了就把通知发给了上一个处理人;
+        // 而验收类事件 toUserId 为 null,更只能从 order 上取现有处理人。
+        notifyOutboxWriter.stage(NotifyMessage.of(order.getId(), order.getOrderNo(), order.getTitle(),
+                order.getDepartmentId(), order.getUserId(), order.getHandlerId(), UserContext.getUserId(),
+                operateType, current.getCode(), target.getCode(), remark));
         log.info("工单流转: id={}, {} -> {}, operateType={}",
                 order.getId(), current.getDesc(), target.getDesc(), operateType.getDesc());
     }
