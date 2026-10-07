@@ -70,6 +70,32 @@ mq:
       max-retry: 5
       backoff-seconds: 30
 
+# 分布式锁行为参数(模块四):wait/lease 是策略不是代码,集中在此便于调参
+redis:
+  lock:
+    # 编号生成:临界区极短(INCR + 首次 EXPIRE)
+    order-no-wait-seconds: 2
+    order-no-lease-seconds: 5
+    # 资源申请:锁内有一次 JOIN 校验 + 一次事务写入
+    resource-wait-seconds: 3
+    resource-lease-seconds: 10
+    # 缓存重建:抢不到锁不阻塞,直接回源
+    cache-rebuild-wait-seconds: 1
+    cache-rebuild-lease-seconds: 5
+
+# 缓存策略(模块四)
+cache:
+  workorder-detail:
+    logical-ttl-seconds: 300     # 逻辑过期 5 分钟(到达后返回旧值 + 异步重建)
+    physical-ttl-seconds: 1800   # 物理 TTL 30 分钟(仅兜底清场,必须 > 逻辑 TTL)
+  absent-ttl-seconds: 60         # 穿透哨兵 60 秒(要短,避免「查不到」多存活)
+  permission-tree-ttl-seconds: 1800   # 权限树字典 30 分钟(TTL-only)
+  role-perms-ttl-seconds: 600         # 角色权限 10 分钟(写失效为主,TTL 兜底)
+  rebuild-executor:
+    core-size: 2
+    max-size: 4
+    queue-capacity: 256          # 满则丢弃 + warn(重建是可丢弃的优化)
+
 # jwt配置
 jwt:
   secret: iluhmq #签名密钥

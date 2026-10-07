@@ -2,11 +2,17 @@ package com.rj.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.rj.cache.CacheClient;
+import com.rj.common.LockConstants;
 import com.rj.common.PageResult;
+import com.rj.common.RedisConstants;
 import com.rj.common.ResultCode;
 import com.rj.common.UserAuth;
 import com.rj.common.UserContext;
+import com.rj.config.CacheProperties;
+import com.rj.config.RedisLockProperties;
 import com.rj.exception.BusinessException;
+import com.rj.lock.RedisLockHelper;
 import com.rj.mapper.UserMapper;
 import com.rj.mapper.WorkOrderMapper;
 import com.rj.mapper.WorkOrderOperateLogMapper;
@@ -32,10 +38,14 @@ import com.rj.service.IWorkOrderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.StringUtils;
 
+import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -43,7 +53,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -86,29 +95,89 @@ public class WorkOrderService implements IWorkOrderService {
     /** 系统操作人ID:超时关闭由定时任务触发,无真实登录用户,记为 0 */
     private static final long SYSTEM_OPERATOR_ID = 0L;
 
-    /** 工单编号时间部分格式:精确到毫秒 */
-    private static final DateTimeFormatter ORDER_NO_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS");
+    /** 资源申请工单类型常量(order_type=2 时启用同资源并发互斥) */
+    private static final int ORDER_TYPE_RESOURCE_APPLY = 2;
+
+    /** 编号日期部分格式:yyyyMMdd */
+    private static final DateTimeFormatter ORDER_NO_DAY_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
+
+    /** 日内序号补零格式:序号不足 6 位左补 0,如 000001 */
+    private static final String ORDER_NO_SEQ_FORMAT = "%06d";
 
     private final WorkOrderMapper workOrderMapper;
     private final WorkOrderResourceMapper workOrderResourceMapper;
     private final WorkOrderOperateLogMapper workOrderOperateLogMapper;
     private final UserMapper userMapper;
     private final NotifyOutboxWriter notifyOutboxWriter;
+    /** 模块四:缓存统一入口(详情缓存读写 + 写失效) */
+    private final CacheClient cacheClient;
+    /** 模块四:Redisson 锁封装(编号生成 / 资源申请互斥) */
+    private final RedisLockHelper redisLockHelper;
+    /** 模块四:缓存策略参数(TTL 等) */
+    private final CacheProperties cacheProperties;
+    /** 模块四:分布式锁行为参数(wait / lease) */
+    private final RedisLockProperties lockProperties;
+    /** 日内序号 INCR 用字符串模板(序号值与缓存值序列化无关,故不复用 RedisTemplate<String,Object>) */
+    private final StringRedisTemplate stringRedisTemplate;
+    /**
+     * 编程式事务模板。
+     * <p>
+     * {@code create()} 需要「锁在事务外层」——若锁落在 {@code @Transactional} 内部,
+     * 它会在事务提交前就释放,资源互斥形同虚设。而 create() 自身又不能挂注解式事务,
+     * 故用本模板把「数据库写入」显式包成一个事务边界,让锁留在事务之外。
+     */
+    private final TransactionTemplate transactionTemplate;
 
     /**
-     * 创建工单:主表与资源明细在同一事务写入,任一失败整体回滚。
-     * 提单人、归属部门取自登录上下文,不接受前端传入。
+     * 创建工单(模块四改造)。
+     * <p>
+     * 与模块二的区别只在「资源申请」一类:当 {@code orderType=2} 且带资源明细时,
+     * 按「部门 + 资源类别 + 资源名称」加 Redisson MultiLock,锁内校验「同部门不存在进行中的
+     * 同类资源申请」;其余类型行为不变。
+     * <p>
+     * <b>为什么锁在事务外层?</b> 若把锁放在 {@code @Transactional} <b>内部</b>,锁会在方法返回
+     * (事务提交前)就释放,下一个并发请求会在前一个事务<b>尚未提交</b>时通过校验,互斥形同虚设。
+     * 因此这里刻意<b>不挂</b> {@code @Transactional},改用 {@link TransactionTemplate} 把落库
+     * 包成一个显式事务,让锁的生命周期 ≥ 事务的生命周期。
      */
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public Long create(WorkOrderCreateDTO dto) {
-        Long userId = UserContext.getUserId();
         Long departmentId = UserContext.getDepartmentId();
         // 部门是工单数据隔离的基础,无部门的账号(如全局 ADMIN)不允许提单
         if (departmentId == null) {
             throw new BusinessException(ResultCode.BAD_REQUEST, "当前用户未归属部门,无法提交工单");
         }
 
+        if (isResourceApply(dto)) {
+            // 一单多资源 → 多把锁;排序 + 去重在 helper 内完成,防死锁
+            List<String> lockKeys = resourceLockKeys(distinctResourceKeys(dto), departmentId);
+            return redisLockHelper.executeWithMultiLock(lockKeys,
+                    lockProperties.getResourceWaitSeconds(), lockProperties.getResourceLeaseSeconds(),
+                    () -> transactionTemplate.execute(status -> doCreate(dto, departmentId)));
+        }
+        return transactionTemplate.execute(status -> doCreate(dto, departmentId));
+    }
+
+    /**
+     * 创建工单落库:主表与资源明细在同一事务写入,任一失败整体回滚。
+     * 提单人、归属部门取自登录上下文,不接受前端传入。
+     *
+     * @param dto          创建参数
+     * @param departmentId 当前用户部门(已在 {@link #create} 中校验非空)
+     * @return 新工单ID
+     */
+    private Long doCreate(WorkOrderCreateDTO dto, Long departmentId) {
+        // 资源申请:锁内校验「同部门不存在进行中的同类资源申请」,避免并发重复提交
+        if (isResourceApply(dto)) {
+            for (ResourceKey key : distinctResourceKeys(dto)) {
+                if (workOrderMapper.countActiveResourceApplications(departmentId, key.type(), key.name()) > 0) {
+                    throw new BusinessException(ResultCode.CONFLICT,
+                            "该资源已有进行中的申请: " + key.type() + "/" + key.name());
+                }
+            }
+        }
+
+        Long userId = UserContext.getUserId();
         WorkOrder order = WorkOrder.builder()
                 .orderNo(generateOrderNo())
                 .userId(userId)
@@ -186,6 +255,10 @@ public class WorkOrderService implements IWorkOrderService {
                         .remark(item.getRemark())
                         .build());
             }
+            // 模块四:明细已被替换,必须「再删一次」详情缓存。
+            // 上面的 transition() 已注册过一次失效,但那是「明细尚未替换」时的状态:
+            // 若只删那一次,回填可能发生在「明细已替换、缓存却还没再删」的窗口里,导致读过期明细。
+            cacheClient.evictAfterCommit(RedisConstants.WORKORDER_DETAIL_KEY + id);
         }
     }
 
@@ -254,13 +327,61 @@ public class WorkOrderService implements IWorkOrderService {
     }
 
     /**
-     * 工单详情:主表 + 资源明细 + 操作日志,并做可见范围校验。
+     * 工单详情:主表 + 资源明细 + 操作日志,并做可见范围校验(模块四:接入逻辑过期缓存)。
+     * <p>
+     * 缓存的 {@code WorkOrderDetailVO} <b>不含调用者身份</b>,只描述工单本身,因此:
+     * <ul>
+     *   <li>命中缓存<b>仍要</b>跑一次 {@code requireViewScope}——<b>缓存只省 DB,不省鉴权</b>;</li>
+     *   <li>判权改用 VO 上的 userId / departmentId / handlerId,不再回源 DB。</li>
+     * </ul>
+     * 最危险的反模式是「因为命中缓存就跳过判权」:那会在角色/部门变更后出现越权窗口。
      */
     @Override
     public WorkOrderDetailVO detail(Long id) {
-        WorkOrder order = requireOrder(id);
-        requireViewScope(order);
+        // 参数校验先于缓存:非法 id 连 Redis 都不进,是最便宜的穿透防护
+        if (id == null || id <= 0) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "工单ID非法");
+        }
 
+        WorkOrderDetailVO vo = loadDetailWithCache(id);
+        if (vo == null) {
+            // 回源为空(或命中空值哨兵):该 id 在库中确实不存在
+            throw new BusinessException(ResultCode.NOT_FOUND, "工单不存在");
+        }
+        requireViewScope(vo);
+        return vo;
+    }
+
+    /**
+     * 读穿详情缓存:逻辑过期 + 互斥重建 + 空值哨兵。
+     * <p>
+     * 逻辑/物理/哨兵三类 TTL 均取自 {@link CacheProperties},只在此处解析一次。
+     *
+     * @param id 工单ID
+     * @return 详情视图;工单不存在时返回 null
+     */
+    private WorkOrderDetailVO loadDetailWithCache(Long id) {
+        CacheProperties.WorkorderDetail detailTtl = cacheProperties.getWorkorderDetail();
+        return cacheClient.getLogical(
+                RedisConstants.WORKORDER_DETAIL_KEY + id,
+                RedisConstants.WORKORDER_ABSENT_KEY + id,
+                detailTtl.getLogicalTtlSeconds(),
+                detailTtl.getPhysicalTtlSeconds(),
+                cacheProperties.getAbsentTtlSeconds(),
+                () -> loadDetailFromDb(id));
+    }
+
+    /**
+     * 从数据库装载详情(缓存未命中时的回源逻辑):主表 + 资源明细 + 操作日志。
+     *
+     * @param id 工单ID
+     * @return 详情视图;工单不存在时返回 null(由 {@link CacheClient} 写入空值哨兵)
+     */
+    private WorkOrderDetailVO loadDetailFromDb(Long id) {
+        WorkOrder order = workOrderMapper.selectById(id);
+        if (order == null) {
+            return null;
+        }
         WorkOrderDetailVO vo = new WorkOrderDetailVO();
         BeanUtils.copyProperties(order, vo);
         vo.setStatusDesc(WorkOrderStatus.fromCode(order.getStatus()).getDesc());
@@ -378,6 +499,8 @@ public class WorkOrderService implements IWorkOrderService {
             }
             insertLog(order.getId(), SYSTEM_OPERATOR_ID, OperateType.TIMEOUT_CLOSE,
                     current.getCode(), WorkOrderStatus.TIMEOUT.getCode(), null, order.getRemark());
+            // 模块四:该工单状态已变,详情缓存失效(每条成功关闭后各自登记,提交后统一 DEL)
+            cacheClient.evictAfterCommit(RedisConstants.WORKORDER_DETAIL_KEY + order.getId());
             // 触点③:系统行为,操作人记为 0(排除操作人这一步据实为空操作)
             notices.add(NotifyMessage.of(order.getId(), order.getOrderNo(), order.getTitle(),
                     order.getDepartmentId(), order.getUserId(), order.getHandlerId(),
@@ -444,6 +567,10 @@ public class WorkOrderService implements IWorkOrderService {
         if (workOrderMapper.updateById(order) == 0) {
             throw new BusinessException(ResultCode.CONFLICT, "工单已被他人修改,请刷新后重试");
         }
+
+        // 模块四:状态/处理人已变,详情缓存失效(事务提交后 DEL,避免「回滚却删了缓存」的无谓重建)。
+        // 这是 7 个流转入口(resubmit/review/dispatch/transfer/process/accept/withdraw)的唯一汇聚点。
+        cacheClient.evictAfterCommit(RedisConstants.WORKORDER_DETAIL_KEY + order.getId());
 
         insertLog(order.getId(), UserContext.getUserId(), operateType,
                 current.getCode(), target.getCode(), toUserId, remark);
@@ -515,18 +642,24 @@ public class WorkOrderService implements IWorkOrderService {
         });
     }
 
-    /** 详情可见范围:管理员全可见;提单人/本部门/处理人各按自身维度可见 */
-    private void requireViewScope(WorkOrder order) {
+    /**
+     * 详情可见范围:管理员全可见;提单人/本部门/处理人各按自身维度可见。
+     * <p>
+     * 判权对象改为 {@link WorkOrderDetailVO}(而非 {@link WorkOrder}),因为详情走缓存后
+     * 命中时手里只有 VO。VO 上同样带 userId / departmentId / handlerId,判权口径不变——
+     * <b>缓存只省 DB,不省鉴权</b>。
+     */
+    private void requireViewScope(WorkOrderDetailVO vo) {
         Set<String> roles = currentRoles();
         if (roles.contains(ROLE_ADMIN)) {
             return;
         }
         Long userId = UserContext.getUserId();
         Long departmentId = UserContext.getDepartmentId();
-        boolean visible = (roles.contains(ROLE_SUBMITTER) && userId.equals(order.getUserId()))
+        boolean visible = (roles.contains(ROLE_SUBMITTER) && userId.equals(vo.getUserId()))
                 || ((roles.contains(ROLE_REVIEWER) || roles.contains(ROLE_DISPATCHER))
-                        && departmentId != null && departmentId.equals(order.getDepartmentId()))
-                || (roles.contains(ROLE_HANDLER) && userId.equals(order.getHandlerId()));
+                        && departmentId != null && departmentId.equals(vo.getDepartmentId()))
+                || (roles.contains(ROLE_HANDLER) && userId.equals(vo.getHandlerId()));
         if (!visible) {
             throw new BusinessException(ResultCode.FORBIDDEN, "无权查看该工单");
         }
@@ -603,10 +736,68 @@ public class WorkOrderService implements IWorkOrderService {
         return auth.getRoleCodes();
     }
 
-    /** 生成工单编号:WO + 毫秒级时间戳 + 3 位随机数,配合 uk_order_no 保证唯一 */
+    /**
+     * 生成工单编号(模块四改造):{@code WO + yyyyMMdd + 6 位日内自增序号}。
+     * <p>
+     * 旧格式是「毫秒时间戳 + 3 位随机」,毫秒内并发 &gt; 1000 时会撞,把正确性全押在
+     * {@code uk_order_no} 的冲突重试上(而当时没有重试,撞了就 500)。新格式把序号交给
+     * Redis {@code INCR},配合唯一键做双保险。
+     * <p>
+     * <b>锁的真正价值</b>:{@code INCR} 本身原子,「防重号」主要靠它 + {@code uk_order_no};
+     * 锁守的是「{@code INCR} + 首次 {@code EXPIRE}」两步的原子性——否则首日第一次生成时,
+     * 若在两步之间进程崩溃,会留下一个<b>永不过期</b>的序号键。索取该临界区锁失败抛 409。
+     * <p>
+     * 编号只需<b>唯一、不需连续</b>,故抢锁失败/事务回滚造成的序号「空洞」可接受,不为「连续」额外设计。
+     */
     private String generateOrderNo() {
-        return "WO" + LocalDateTime.now().format(ORDER_NO_FORMATTER)
-                + String.format("%03d", ThreadLocalRandom.current().nextInt(1000));
+        return redisLockHelper.executeWithLock(
+                LockConstants.WORKORDER_NO_LOCK_KEY,
+                lockProperties.getOrderNoWaitSeconds(), lockProperties.getOrderNoLeaseSeconds(),
+                () -> {
+                    String day = LocalDate.now().format(ORDER_NO_DAY_FORMATTER);
+                    String seqKey = RedisConstants.WORKORDER_NO_SEQ_KEY + day;
+                    Long seq = stringRedisTemplate.opsForValue().increment(seqKey);
+                    // 首次写入补过期,防止序号键「只增不删」永久驻留;跨天自然换新键
+                    if (seq != null && seq == 1L) {
+                        stringRedisTemplate.expire(seqKey,
+                                Duration.ofSeconds(RedisConstants.WORKORDER_NO_SEQ_EXPIRE_SECONDS));
+                    }
+                    return "WO" + day + String.format(ORDER_NO_SEQ_FORMAT, seq == null ? 1L : seq);
+                });
+    }
+
+    /** 是否资源申请工单(带资源明细的 orderType=2),判断是否启用同资源并发互斥 */
+    private boolean isResourceApply(WorkOrderCreateDTO dto) {
+        return dto.getOrderType() != null && dto.getOrderType() == ORDER_TYPE_RESOURCE_APPLY
+                && dto.getResources() != null && !dto.getResources().isEmpty();
+    }
+
+    /**
+     * 收集本次申请涉及的「资源类别 + 资源名称」去重集合。
+     * <p>
+     * 同一张单里重复申请同一资源,只算一个互斥目标——重复的锁名会被 helper 再去一次重,但这里
+     * 先去重能让「锁内校验」也不对同一资源重复查询。
+     */
+    private List<ResourceKey> distinctResourceKeys(WorkOrderCreateDTO dto) {
+        return dto.getResources().stream()
+                .map(r -> new ResourceKey(r.getResourceType(), r.getResourceName()))
+                .distinct()
+                .toList();
+    }
+
+    /** 由 (type,name) 集合生成资源申请锁名列表:lock:resource:apply:{deptId}:{type}:{name} */
+    private List<String> resourceLockKeys(List<ResourceKey> keys, Long departmentId) {
+        return keys.stream()
+                .map(k -> LockConstants.RESOURCE_APPLY_LOCK_PREFIX + departmentId + ":" + k.type() + ":" + k.name())
+                .toList();
+    }
+
+    /**
+     * 资源互斥目标(资源类别 + 资源名称)。
+     * <p>
+     * 用 record 而非 {@code String[]}:record 自带 equals/hashCode,{@code distinct()} 才能按值去重。
+     */
+    private record ResourceKey(String type, String name) {
     }
 
     /** 计算超时时间:未指定则默认 {@value #DEFAULT_EXPIRE_HOURS} 小时后;指定但不能早于当前时间 */

@@ -1,7 +1,10 @@
 package com.rj.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.rj.cache.CacheClient;
+import com.rj.common.RedisConstants;
 import com.rj.common.ResultCode;
+import com.rj.config.CacheProperties;
 import com.rj.exception.BusinessException;
 import com.rj.mapper.PermissionMapper;
 import com.rj.mapper.RoleMapper;
@@ -33,6 +36,8 @@ public class RoleService implements IRoleService {
     private final RolePermissionMapper rolePermissionMapper;
     private final UserRoleMapper userRoleMapper;
     private final IAuthService authService;
+    private final CacheClient cacheClient;
+    private final CacheProperties cacheProperties;
 
     /**
      * 全部角色,按 id 升序,供前端下拉选择。
@@ -87,16 +92,22 @@ public class RoleService implements IRoleService {
                 new LambdaQueryWrapper<UserRole>().eq(UserRole::getRoleId, roleId));
         holders.forEach(userRole -> authService.evict(userRole.getUserId()));
 
+        // 模块四:角色已分配权限列表的缓存同样要失效(提交后删),与上面的用户快照失效互不替代
+        cacheClient.evictAfterCommit(RedisConstants.ROLE_PERMS_KEY + roleId);
+
         log.info("分配角色权限: roleId={}, permissionIds={}, 影响用户数={}",
                 roleId, distinctIds, holders.size());
     }
 
     /**
-     * 查询角色已绑定的权限ID列表
+     * 查询角色已绑定的权限ID列表(模块四:接入 Redis 缓存,写失效 + TTL 兜底)
      * <p>
      * 只读接口,不做任何写入,目的是让前端的权限抽屉能把你角色当前的勾选状态回显出来
      * (与之配对的 {@link #assignPermissions} 是覆盖式写,不回显就存在误清空的风险)。
      * 权限名称不在这里返回:它是全局字典,前端用权限树接口拿一次即可。
+     * <p>
+     * <b>缓存注意</b>:空列表也会被缓存(loader 返回的是非 null 的空集),下次读直接命中;
+     * 主失效手段是 {@link #assignPermissions} 提交后的 DEL,TTL(默认 10 分钟)只兜「DEL 失败」。
      *
      * @param roleId 角色ID
      * @return 权限ID列表;角色无任何权限时为空列表
@@ -110,7 +121,17 @@ public class RoleService implements IRoleService {
             throw new BusinessException(ResultCode.BAD_REQUEST, "角色ID非法");
         }
         requireRole(roleId);
+        return cacheClient.getOrLoad(RedisConstants.ROLE_PERMS_KEY + roleId,
+                cacheProperties.getRolePermsTtlSeconds(), () -> loadPermissionIdsFromDb(roleId));
+    }
 
+    /**
+     * 从数据库读取角色已绑定的权限ID(缓存未命中时的回源逻辑)。
+     *
+     * @param roleId 角色ID
+     * @return 权限ID列表
+     */
+    private List<Long> loadPermissionIdsFromDb(Long roleId) {
         // role_permission 一个角色通常只有十几行,直接取回内存里抽 permissionId,无需 join 权限表
         return rolePermissionMapper.selectList(
                         new LambdaQueryWrapper<RolePermission>().eq(RolePermission::getRoleId, roleId))
