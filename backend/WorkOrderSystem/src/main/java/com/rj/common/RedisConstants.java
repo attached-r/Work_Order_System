@@ -29,6 +29,15 @@ public final class RedisConstants {
     public static final long LOGIN_TOKEN_EXPIRE_HOURS = 2L;
 
     /**
+     * 滑动续期(节流)阈值(秒):仅当键的剩余存活时间低于该值时才续期,取生命周期的一半(1h)。
+     * <p>
+     * 每次请求都 EXPIRE 会对 Redis 造成无谓的写放大(每请求一次写 + 主从/AOF 传播);
+     * 而持续活跃的用户在续满 2h 后,要再过约 1h 才会再次触发续期。
+     * token 与鉴权快照两个键共用该阈值。
+     */
+    public static final long LOGIN_RENEW_THRESHOLD_SECONDS = LOGIN_TOKEN_EXPIRE_HOURS * 3600L / 2;
+
+    /**
      * 未读通知数缓存 key 前缀,完整 key: notify:unread:{userId}
      * value 为未读条数的字符串。策略是「写失效 + TTL 兜底」,不用 INCR:
      * DEL 是幂等的,不可能算错;最坏情况只是下次读回源一次(索引覆盖计数,亚毫秒)。

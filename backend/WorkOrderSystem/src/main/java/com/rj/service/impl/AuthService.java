@@ -13,9 +13,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.util.HashSet;
 import java.util.concurrent.TimeUnit;
 
+import static com.rj.common.RedisConstants.LOGIN_RENEW_THRESHOLD_SECONDS;
 import static com.rj.common.RedisConstants.LOGIN_TOKEN_EXPIRE_HOURS;
 import static com.rj.common.RedisConstants.LOGIN_USER_AUTH_KEY;
 
@@ -35,7 +37,7 @@ public class AuthService implements IAuthService {
     /**
      * 取用户鉴权信息:缓存优先
      * <p>
-     * 命中缓存直接返回,并滑动续期使其与登录 token 同生命周期;未命中则回源数据库
+     * 命中缓存直接返回,并(节流地)滑动续期使其与登录 token 同生命周期;未命中则回源数据库
      * 重建并写回,不强制用户重新登录。
      *
      * @param userId 用户ID
@@ -49,8 +51,8 @@ public class AuthService implements IAuthService {
         Object cached = redisTemplate.opsForValue().get(key);
         // 类型不符按未命中处理(脏数据),落到下面回源
         if (cached instanceof UserAuth userAuth) {
-            // 滑动续期:与 token 一起保持活跃
-            redisTemplate.expire(key, LOGIN_TOKEN_EXPIRE_HOURS, TimeUnit.HOURS);
+            // 滑动续期(节流):仅当剩余存活低于阈值时才写 TTL,避免每请求一次 Redis 写
+            renewIfBelowThreshold(key);
             return userAuth;
         }
         // 未命中:回源数据库重建并写回,不强制用户重新登录
@@ -58,6 +60,20 @@ public class AuthService implements IAuthService {
         cache(userAuth);
         log.debug("鉴权缓存未命中,已回源重建: userId={}", userId);
         return userAuth;
+    }
+
+    /**
+     * 滑动续期(节流):仅当键的剩余存活低于阈值时才续期,避免每个请求都写一次 TTL。
+     * <p>
+     * 与拦截器对登录 token 的处理同款:读一次 TTL(O(1)、不传播),换取消除每请求的 EXPIRE
+     * 写放大。鉴权快照与 token TTL 一致,故共用同一阈值。
+     */
+    private void renewIfBelowThreshold(String key) {
+        Long remaining = redisTemplate.getExpire(key, TimeUnit.SECONDS);
+        // remaining 为 -1(无 TTL)/ -2(键不存在)时不动:正常快照始终带 TTL
+        if (remaining != null && remaining >= 0 && remaining < LOGIN_RENEW_THRESHOLD_SECONDS) {
+            redisTemplate.expire(key, Duration.ofHours(LOGIN_TOKEN_EXPIRE_HOURS));
+        }
     }
 
     /**

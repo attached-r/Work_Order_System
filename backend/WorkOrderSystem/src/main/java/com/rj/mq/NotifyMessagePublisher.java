@@ -96,6 +96,12 @@ public class NotifyMessagePublisher {
      * <p>
      * 公开给补偿 Job 复用:「认领」是状态机的入口动作,两处各写一份 CAS SQL
      * 迟早会有一处漏改 {@code status} 条件,而那种漏洞只在多实例并发时才显现。
+     * <p>
+     * <b>认领即打「发送租约」</b>:除置为 status=1 外,还把 {@code next_retry_time} 推到
+     * 「现在 + {@code send-lease-seconds}」。这一步是让补偿 Job 的孤儿回收能区分
+     * 「正在发送」与「崩溃遗留」——回收只看 {@code next_retry_time <= NOW()},打了租约的
+     * 在途行不会被命中,只有超出租约仍未结算的行才会被判为孤儿复位重投。
+     * 与回收/扫描一样用数据库 {@code NOW()},保证三处同一时钟源,避免应用与库时钟漂移。
      *
      * @param rows 候选 outbox 行(可能已被别的实例抢先认领)
      * @return 本轮真正认领到的行
@@ -107,7 +113,9 @@ public class NotifyMessagePublisher {
                     .eq(MqMessageReliability::getId, row.getId())
                     .eq(MqMessageReliability::getStatus, STATUS_PENDING)
                     .set(MqMessageReliability::getStatus, STATUS_CLAIMED)
-                    .setSql("send_time = NOW()");
+                    // send-lease-seconds 来自配置(非外部输入),拼接进 SQL 无注入风险
+                    .setSql("send_time = NOW(), next_retry_time = DATE_ADD(NOW(), INTERVAL "
+                            + properties.getSendLeaseSeconds() + " SECOND)");
             if (mqMessageReliabilityMapper.update(null, wrapper) == 1) {
                 claimed.add(row);
             } else {

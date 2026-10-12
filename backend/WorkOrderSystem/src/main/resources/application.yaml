@@ -63,6 +63,8 @@ mq:
     dead-letter-queue: workorder.notify.dlq
     dead-letter-routing-key: workorder.notify.dead
     confirm-timeout-seconds: 3
+    # 认领发送租约(秒):认领时把 next_retry_time 推到该时刻,供孤儿回收区分「在途」与「崩溃遗留」
+    send-lease-seconds: 30
     compensation:
       enabled: true
       scan-delay-ms: 30000

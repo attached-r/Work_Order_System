@@ -107,5 +107,17 @@ public class OpenApiConfig {
                 .pathsToMatch("/notification/**")
                 .build();
     }
+
+    /**
+     * @return AgentTool 暴露接口分组
+     */
+    @Bean
+    public GroupedOpenApi AgentToolOpenApi(){
+        return GroupedOpenApi.builder()
+                .group("通知中心")
+                .pathsToMatch("/AgentTool/**")
+                .build();
+    }
+
     // 诸如上述 需要分组再编写
 }

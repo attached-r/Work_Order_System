@@ -23,8 +23,9 @@ import java.util.List;
  *   <li><strong>回收孤儿</strong>:{@code status=1} 表示「已认领、正在发送」。进程若在认领之后、
  *       拿到 confirm 之前崩溃,这一行会永远停在 1——既不会被扫描(第 2 步只扫 0),
  *       也永远不会成功。<strong>一个只写不清理的状态机一定会积压。</strong>
- *       把它复位为 0 交给下轮重投。理论上可能误伤「发送耗时超过一个扫描周期」的行,
- *       代价是重复投递一次——而幂等吸收重复正是为此存在的。</li>
+ *       把它复位为 0 交给下轮重投。判据是「认领时打下的发送租约已到期」
+ *       ({@code next_retry_time <= NOW()},见 {@link NotifyMessagePublisher#claim})——
+ *       在途消息的 next_retry_time 落在未来,因此不会被误伤;只有超出租约仍未结算的行才复位。</li>
  *   <li><strong>扫描待发 + 认领 + 重投</strong>:候选条件 {@code status=0 且 next_retry_time 已到
  *       且 retry_count < maxRetry},走 {@code idx_status_retry(status, next_retry_time)}
  *       等值+范围,{@code LIMIT} 到量即停,不扫描历史数据。稳态下这里扫不到任何东西,
@@ -79,6 +80,11 @@ public class MqCompensationJob {
 
     /**
      * 回收「认领后进程崩溃」的孤儿:{@code status=1 → 0}。
+     * <p>
+     * 条件是「认领时打下的发送租约已到期」:{@code next_retry_time <= NOW()}。
+     * 之所以用 next_retry_time 作判据,是因为 {@link NotifyMessagePublisher#claim} 认领时会把它
+     * 推进到「现在 + send-lease-seconds」——在途消息因此落在未来、不被回收命中,
+     * 只有真正卡住(超出租约)的行才会复位重投。
      * <p>
      * 条件用数据库的 {@code NOW()} 而非应用时钟,避免应用与数据库时钟漂移时
      * 复位的范围与扫描的范围不一致。

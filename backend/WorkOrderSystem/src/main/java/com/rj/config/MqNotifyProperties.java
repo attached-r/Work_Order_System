@@ -39,6 +39,18 @@ public class MqNotifyProperties {
     /** 同步等待 broker confirm 的超时时间(秒) */
     private long confirmTimeoutSeconds = 3L;
 
+    /**
+     * 认领发送租约(秒):{@code claim} 成功后,把 next_retry_time 推进到「现在 + 本值」。
+     * <p>
+     * 作用是把「正在发送」与「进程崩溃后遗留」区分开:补偿 Job 回收 {@code status=1} 孤儿时
+     * 只看 {@code next_retry_time <= NOW()},打了租约之后,在途消息的 next_retry_time 落在未来,
+     * 因此不会被回收误伤;只有超出租约仍未结算的行才被视为孤儿。
+     * <p>
+     * 取值必须明显大于一次批量发送的最坏耗时(confirm 超时 + 网络/DB 往返),
+     * 否则在途消息可能早于发送完成就被判定为孤儿。
+     */
+    private long sendLeaseSeconds = 30L;
+
     /** 补偿任务配置 */
     private Compensation compensation = new Compensation();
 

@@ -19,8 +19,10 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
+import static com.rj.common.RedisConstants.LOGIN_RENEW_THRESHOLD_SECONDS;
 import static com.rj.common.RedisConstants.LOGIN_TOKEN_EXPIRE_HOURS;
 import static com.rj.common.RedisConstants.LOGIN_USER_TOKEN_KEY;
 
@@ -68,8 +70,9 @@ public class LoginInterceptor implements HandlerInterceptor {
 
             checkPermission(handler, userAuth);
 
-            // 滑动续期：只要用户持续访问,登录态就保持活跃
-            stringRedisTemplate.expire(redisKey, LOGIN_TOKEN_EXPIRE_HOURS, TimeUnit.HOURS);
+            // 滑动续期(节流)：只要用户持续访问,登录态就保持活跃。
+            // 不无条件续期——仅当剩余存活低于阈值时才写 TTL,避免每个请求都对 Redis 产生一次写。
+            renewIfBelowThreshold(redisKey);
             return true;
         } catch (BusinessException e) {
             throw e;
@@ -106,6 +109,21 @@ public class LoginInterceptor implements HandlerInterceptor {
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) {
         // 请求结束必须清除 ThreadLocal,避免线程池复用时把上一个请求的 userId 带到下一个请求
         UserContext.clear();
+    }
+
+    /**
+     * 滑动续期(节流):仅当键的剩余存活低于阈值({@link com.rj.common.RedisConstants#LOGIN_RENEW_THRESHOLD_SECONDS})时才续期。
+     * <p>
+     * 读一次 TTL 换取「绝大多数请求不再写 EXPIRE」:每请求无条件续期会让 Redis 每请求多一次写、
+     * 并触发主从/AOF 传播;节流后持续活跃的用户约每小时才续一次,写入量可忽略。
+     * 读 TTL 是一次 O(1)、不传播的廉价操作,换来写放大被消除。
+     */
+    private void renewIfBelowThreshold(String key) {
+        Long remaining = stringRedisTemplate.getExpire(key, TimeUnit.SECONDS);
+        // remaining 为 -1(键无 TTL)/ -2(键不存在)时不动:正常登录键始终带 TTL
+        if (remaining != null && remaining >= 0 && remaining < LOGIN_RENEW_THRESHOLD_SECONDS) {
+            stringRedisTemplate.expire(key, Duration.ofHours(LOGIN_TOKEN_EXPIRE_HOURS));
+        }
     }
 
     /**
