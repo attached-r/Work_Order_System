@@ -1,3 +1,35 @@
+server:
+  port: 10002
+
 spring:
   application:
     name: AgentWorkOrder
+  ai:
+    model:
+      # 用 provider 反向驱动 Spring AI 的模型选择器：
+      #   provider=openai → 启用 OpenAI 的 Chat 自动配置（需要 API key）
+      #   provider=mock   → 取值非 openai，Chat 自动配置不生效，无需 key 即可启动
+      # （六个 OpenAI 自动配置都以 @ConditionalOnProperty(spring.ai.model.xxx=openai, matchIfMissing=true) 为条件，
+      #  即默认全开，必须显式关掉用不到的，否则它们会因缺少 base-url / api-key 而在启动期报错）
+      chat: ${agent.llm.provider}
+      embedding: none
+      image: none
+      moderation: none
+      audio:
+        speech: none
+        transcription: none
+    openai:
+      api-key: ${API_KEY:}
+      # 默认走通义千问的 OpenAI 兼容端点；换 DeepSeek / 自建 endpoint 只需改这里
+      base-url: ${BASE_URL:https://dashscope.aliyuncs.com/compatible-mode}
+      chat:
+        options:
+          model: ${MODEL_NAME:qwen-plus}
+
+agent:
+  llm:
+    # mock=无需 key 跑通链路（默认）；openai=走真实大模型
+    provider: mock
+  workorder:
+    # 项目一 service-workorder 的地址
+    base-url: http://localhost:10001
