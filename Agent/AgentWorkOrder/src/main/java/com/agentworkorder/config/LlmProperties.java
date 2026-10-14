@@ -25,7 +25,7 @@ public class LlmProperties {
      *   <li>{@code openai} —— 走真实大模型（OpenAI 兼容协议，可指向通义千问兼容模式 / DeepSeek 等）。</li>
      * </ul>
      */
-    private String provider = "mock";
+    private String provider = "mock"; // 默认值
 
     /**
      * 系统提示词。质量直接决定模型会不会在正确时机、用正确参数调用工具，故单独抽出来可调。

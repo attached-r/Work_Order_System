@@ -39,4 +39,19 @@ public class AgentChatController {
         return llmClient.stream(sessionId, message, authorization)
                 .map(token -> ServerSentEvent.builder(token).build());
     }
+
+    /**
+     * 连通性自测端点：把 {@code context} 当提问发一趟大模型，阻塞收集全部 token 后整段返回。
+     *
+     * <p>与 {@code /chat} 的区别只在「阻塞 vs 流式」——它仍然走同一个 {@link LlmClient} 端口，
+     * 因此 {@code agent.llm.provider} 配成 {@code openai} 时能直接验证 key / base-url / model 是否配通，
+     * 配成 {@code mock} 时则只会得到 mock 的回显（说明不了 API 是否可用）。
+     */
+    @GetMapping(value = "/hello")
+    public String hello(@RequestParam String context) {
+        return llmClient.stream("hello-test", context, null)
+                .collectList()
+                .map(tokens -> String.join("", tokens))
+                .block();
+    }
 }

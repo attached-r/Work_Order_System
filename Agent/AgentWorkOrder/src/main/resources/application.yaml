@@ -20,16 +20,16 @@ spring:
         transcription: none
     openai:
       api-key: ${API_KEY:}
-      # 默认走通义千问的 OpenAI 兼容端点；换 DeepSeek / 自建 endpoint 只需改这里
-      base-url: ${BASE_URL:https://dashscope.aliyuncs.com/compatible-mode}
+      # 默认走deepseek的 OpenAI 兼容端点
+      base-url: ${BASE_URL:https://api.deepseek.com}
       chat:
         options:
-          model: ${MODEL_NAME:qwen-plus}
+          model: ${MODEL_NAME:deepseek-flash}
 
 agent:
   llm:
     # mock=无需 key 跑通链路（默认）；openai=走真实大模型
-    provider: mock
+    provider: openai
   workorder:
     # 项目一 service-workorder 的地址
     base-url: http://localhost:10001
