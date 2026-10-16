@@ -1,6 +1,7 @@
 package com.agentworkorder.controller;
 
 import com.agentworkorder.llm.LlmClient;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
@@ -20,6 +21,7 @@ import reactor.core.publisher.Flux;
  * <p>用法：{@code GET /api/agent/chat?sessionId=s1&message=...}，带 {@code Authorization} 头。
  * 返回 {@code text/event-stream}，每个 token 一个事件，客户端逐字渲染。
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/agent")
 public class AgentChatController {
@@ -37,7 +39,7 @@ public class AgentChatController {
             // 用户 JWT：完整 Authorization 头值，原样透传给项目一（可能缺省=未登录）
             @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization) {
         return llmClient.stream(sessionId, message, authorization)
-                .map(token -> ServerSentEvent.builder(token).build());
+                .map(token -> ServerSentEvent.builder(token).build()); //包装成sse流式字符串
     }
 
     /**

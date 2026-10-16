@@ -2,6 +2,7 @@ package com.agentworkorder.llm;
 
 import com.agentworkorder.config.LlmProperties;
 import com.agentworkorder.tool.WorkOrderTools;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
@@ -25,6 +26,7 @@ import java.util.Map;
  * 而不是用 ThreadLocal 隐式传递——因为流式 + 工具调用的执行线程不保证是接收请求的那条线程
  * （详见设计文档 §6.2 / §6.3）。
  */
+@Slf4j
 @Component
 @ConditionalOnProperty(name = "agent.llm.provider", havingValue = "openai")
 public class SpringAiLlmClient implements LlmClient {
@@ -44,6 +46,7 @@ public class SpringAiLlmClient implements LlmClient {
 
     @Override
     public Flux<String> stream(String sessionId, String userMessage, String authToken) {
+        log.info("ok");
         return chatClient.prompt()
                 .user(userMessage)
                 // 本次会话的记忆键；MessageChatMemoryAdvisor 据此读写对应会话的消息窗口

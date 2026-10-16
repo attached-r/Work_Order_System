@@ -24,10 +24,10 @@ public class WorkOrderTools {
      */
     public static final String AUTH_HEADER_KEY = "authorization";
 
-    private final WorkOrderToolClient client;
+    private final WorkOrderToolClient toolclient;
 
     public WorkOrderTools(WorkOrderToolClient client) {
-        this.client = client;
+        this.toolclient = client;
     }
 
     /**
@@ -48,7 +48,7 @@ public class WorkOrderTools {
             @ToolParam(required = false, description = "关键字过滤，匹配工单标题 / 内容等；不传表示不限")
             String keyword,
             ToolContext toolContext) {
-        return client.listWorkOrders(status, orderType, keyword, tokenOf(toolContext));
+        return toolclient.listWorkOrders(status, orderType, keyword, tokenOf(toolContext));
     }
 
     /**
@@ -62,7 +62,7 @@ public class WorkOrderTools {
             @ToolParam(description = "工单 ID，整数字符串")
             Long id,
             ToolContext toolContext) {
-        return client.queryWorkOrder(id, tokenOf(toolContext));
+        return toolclient.queryWorkOrder(id, tokenOf(toolContext));
     }
 
     /** 从工具上下文中取出本轮请求的 Authorization 头值；缺席时返回空串（等价于未登录）。 */
