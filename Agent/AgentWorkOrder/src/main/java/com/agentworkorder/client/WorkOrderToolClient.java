@@ -65,6 +65,25 @@ public class WorkOrderToolClient {
 
         RestClient.RequestHeadersSpec<?> spec =
                 restClient.get().uri("/tool/workorder/{id}", id);
+        // 得到 请求对象 添加token之后 retrieve 正式调用接口
+        String body = withAuth(spec, authToken).retrieve().body(String.class);
+        log.info("[tool] 项目一返回：{} 字节", body == null ? 0 : body.length());
+        return body;
+    }
+
+    /**
+     * 查询当前登录用户的身份与权限（{@code GET /tool/user/info}，无参数）。
+     *
+     * <p>返回 {@code UserVO} 的原始 JSON，其中 {@code perms}（{@code List<String>}）是 M2 权限过滤的唯一输入。
+     * 与既有两个方法一致：<b>返回原始 String</b>、失败时是 {@code {code,message}} 精简错误体（HTTP 仍 200）。
+     * 解析由 {@code PermService} 负责（含 401/403 视为匿名、异常降级等 fail-closed 逻辑）。
+     *
+     * @return 项目一返回的原始 JSON（{@code UserVO} 裸数据；失败为精简错误体）
+     */
+    public String getUserInfo(String authToken) {
+        log.info("[tool] GET {}/tool/user/info", baseUrl);
+
+        RestClient.RequestHeadersSpec<?> spec = restClient.get().uri("/tool/user/info");
 
         String body = withAuth(spec, authToken).retrieve().body(String.class);
         log.info("[tool] 项目一返回：{} 字节", body == null ? 0 : body.length());

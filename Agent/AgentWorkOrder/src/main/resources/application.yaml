@@ -4,6 +4,11 @@ server:
 spring:
   application:
     name: AgentWorkOrder
+  # M2：agent 自建审计库（只存「工具调用流水」这类非业务数据；业务事实仍以项目一为准）
+  datasource:
+    url: jdbc:mysql://localhost:3306/work_order_system
+    username: root
+    password: ${DB_PASSWORD:20050603RJ}         # 同项目一，用环境变量注入，避免明文入库
   ai:
     model:
       # 用 provider 反向驱动 Spring AI 的模型选择器：
@@ -33,3 +38,19 @@ agent:
   workorder:
     # 项目一 service-workorder 的地址
     base-url: http://localhost:10001
+  audit:
+    # 审计写入开关：关掉可短路埋点（压测时用），默认开启
+    enabled: true
+    # 返回体摘要截断长度（对齐 result_excerpt 列宽 512）
+    excerpt-max-length: 512
+  perm:
+    # 用户 perms 的进程内缓存时长（秒）；改权限后要等它过期才生效，故不宜过长
+    cache-ttl-seconds: 60
+
+# MyBatis-Plus：列名下划线 → 实体 camelCase 自动映射；主键自增
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: auto
