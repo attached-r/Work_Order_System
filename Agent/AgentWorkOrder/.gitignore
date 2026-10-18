@@ -31,3 +31,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### M3 RAG 本地索引 ###
+# 向量快照与 manifest 属于运行期索引，不入库
+data/

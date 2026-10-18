@@ -1,5 +1,6 @@
 server:
   port: 10002
+# 接口文档地址: http://localhost:10002/swagger-ui/index.html
 
 spring:
   application:
@@ -9,6 +10,15 @@ spring:
     url: jdbc:mysql://localhost:3306/work_order_system
     username: root
     password: ${DB_PASSWORD:20050603RJ}         # 同项目一，用环境变量注入，避免明文入库
+  # Redis：业务代码暂未使用（M5 才接入），这里先按本地环境配好连接参数；
+  # database 用 5，避免与项目一（database 4）的键空间互相污染。
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: ${REDIS_PASSWORD:20050603RJ}
+      database: 5
+      timeout: 10000
   ai:
     model:
       # 用 provider 反向驱动 Spring AI 的模型选择器：
@@ -46,6 +56,47 @@ agent:
   perm:
     # 用户 perms 的进程内缓存时长（秒）；改权限后要等它过期才生效，故不宜过长
     cache-ttl-seconds: 60
+
+  rag:
+    enabled: true
+    # simple=单文件零中间件；milvus=本地 Docker Desktop（19530、无鉴权）
+    store: milvus
+    knowledge-locations: classpath*:knowledge/*.md
+
+    # 检索参数
+    top-k: 4                 # 每次给模型 4 个片段，避免挤占上下文
+    max-top-k: 8             # 模型传再大也只取 8
+    similarity-threshold: 0.35
+    max-content-chars: 1200  # 单片段正文截断
+
+    # 切片参数
+    chunk-size: 400
+    min-chunk-size-chars: 120
+
+    # 入库与索引
+    ingest-on-startup: if-empty      # if-empty | always | never
+    manifest-path: ./data/rag-manifest.json
+    simple:
+      file: ./data/rag-simple-store.json
+
+    embedding:
+      # mock=无 key 冒烟；openai=OpenAI 兼容的 embedding 服务
+      provider: openai
+      # 注意：Spring AI 会在 base-url 后自动追加 /v1/embeddings，故这里不能带 /v1
+      base-url: ${EMBEDDING_BASE_URL:https://api.siliconflow.cn}
+      api-key: ${EMBEDDING_API_KEY:}
+      model: ${EMBEDDING_MODEL:BAAI/bge-m3}
+      dimensions: 1024
+      # bge-m3 维度固定，部分兼容服务不接受 dimensions 参数，默认不发送
+      request-dimensions: false
+
+    milvus:
+      host: ${MILVUS_HOST:localhost}
+      port: ${MILVUS_PORT:19530}     # Docker 默认 gRPC 端口
+      database: default
+      collection: agent_knowledge
+      metric-type: COSINE             # 文本 embedding 常用度量，分数越大越相似
+      index-type: IVF_FLAT            # 中小规模知识库：构建快、召回稳定
 
 # MyBatis-Plus：列名下划线 → 实体 camelCase 自动映射；主键自增
 mybatis-plus:

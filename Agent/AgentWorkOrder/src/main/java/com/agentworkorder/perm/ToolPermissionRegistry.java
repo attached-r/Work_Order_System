@@ -20,7 +20,9 @@ public class ToolPermissionRegistry {
     /** 工具名 → 权限码。查不到时的语义是「未注册」，调用方应按 fail-closed 处理。 */
     private static final Map<String, String> TOOL_PERM = Map.of(
             "listWorkOrders", "workorder:query",
-            "queryWorkOrder", "workorder:query"
+            "queryWorkOrder", "workorder:query",
+            // M3：知识库是内部业务文档，登录且有查询权限的用户才能检索
+            "searchKnowledge", "workorder:query"
     );
 
     /** 返回该工具所需的权限码；未注册的工具返回 {@code null}（调用方须视为「不可见」）。 */

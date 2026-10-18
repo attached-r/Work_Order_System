@@ -12,3 +12,5 @@ export * from './department'
 export * from './permission'
 export * from './workorder'
 export * from './notification'
+// Agent(项目二)单独一套协议,但同样从统一入口导出,页面不必关心它和项目一的差异
+export * from './agent'

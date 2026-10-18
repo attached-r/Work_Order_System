@@ -27,6 +27,11 @@ declare module 'vue-router' {
     publicPage?: boolean
     /** 高亮的菜单路径,用于详情页保持父菜单选中态 */
     activeMenu?: string
+    /**
+     * 满幅页面:去掉内容区的最大宽度、内边距与滚动,把高度完整交给页面。
+     * 聊天页要靠它撑满一整屏并在内部自己滚动(见 BasicLayout)。
+     */
+    fullBleed?: boolean
   }
 }
 
@@ -54,6 +59,14 @@ export const routes: RouteRecordRaw[] = [
         name: 'dashboard',
         component: () => import('@/views/dashboard/DashboardView.vue'),
         meta: { title: '工作台', icon: 'Odometer' },
+      },
+      {
+        // 智能助手:登录即可用,不挂权限码 —— 没有 workorder:query 的用户
+        // 依然可以问通用流程问题,只是模型侧看不到工单工具(后端 fail-closed)。
+        path: 'agent',
+        name: 'agent-chat',
+        component: () => import('@/views/agent/AgentChatView.vue'),
+        meta: { title: '智能助手', icon: 'MagicStick', fullBleed: true },
       },
       {
         path: 'workorder',
@@ -109,6 +122,14 @@ export const routes: RouteRecordRaw[] = [
             name: 'system-dept',
             component: () => import('@/views/system/DeptListView.vue'),
             meta: { title: '部门管理', icon: 'OfficeBuilding', perm: 'user:manage' },
+          },
+          {
+            // 知识库重建与状态查询需要 user:manage,与父级保持一致,
+            // 侧边栏按父级权限整组显隐,路由守卫再按叶子权限挡直达。
+            path: 'knowledge',
+            name: 'system-knowledge',
+            component: () => import('@/views/system/KnowledgeAdminView.vue'),
+            meta: { title: '知识库管理', icon: 'Files', perm: 'user:manage' },
           },
         ],
       },

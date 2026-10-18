@@ -1,6 +1,7 @@
 package com.agentworkorder.llm;
 
 import com.agentworkorder.config.LlmProperties;
+import com.agentworkorder.knowledge.KnowledgeTools;
 import com.agentworkorder.perm.PermService;
 import com.agentworkorder.perm.ToolPermissionRegistry;
 import com.agentworkorder.perm.UserPerms;
@@ -12,10 +13,12 @@ import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -52,6 +55,7 @@ public class SpringAiLlmClient implements LlmClient {
 
     public SpringAiLlmClient(ChatClient.Builder builder,
                              WorkOrderTools workOrderTools,
+                             ObjectProvider<KnowledgeTools> knowledgeToolsProvider,
                              LlmProperties llmProperties,
                              ChatMemory chatMemory,
                              PermService permService,
@@ -59,14 +63,29 @@ public class SpringAiLlmClient implements LlmClient {
         this.provider = llmProperties.getProvider();
         this.permService = permService;
         this.permissionRegistry = permissionRegistry;
+
+        // 步骤 1：RAG 开启时 KnowledgeTools 才存在；关闭时 Provider 返回 null，
+        //         系统提示也切换为不含检索规则的基础版本
+        KnowledgeTools knowledgeTools = knowledgeToolsProvider.getIfAvailable();
+        String systemPrompt = knowledgeTools != null
+                ? llmProperties.getSystemPromptWithRag()
+                : llmProperties.getSystemPrompt();
+
         this.chatClient = builder
-                .defaultSystem(llmProperties.getSystemPrompt())
+                .defaultSystem(systemPrompt)
                 // 注意：这里刻意不再 defaultTools(...)——工具改到每请求按权限注册
                 .defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory).build())
                 .build();
-        // 把 @Tool 方法编成 ToolCallback[]（对象级：两个方法都在同一个 @Component 内）
+
+        // 步骤 2：把全部 @Tool 对象编成 ToolCallback[]（M3 从单对象改为多对象）
+        //         WorkOrderTools = 实时数据；KnowledgeTools = 静态规则
+        List<Object> toolObjects = new ArrayList<>();
+        toolObjects.add(workOrderTools);
+        if (knowledgeTools != null) {
+            toolObjects.add(knowledgeTools);
+        }
         this.allToolCallbacks = MethodToolCallbackProvider.builder()
-                .toolObjects(workOrderTools)
+                .toolObjects(toolObjects.toArray())
                 .build()
                 .getToolCallbacks();
     }

@@ -6,6 +6,12 @@ interface ImportMetaEnv {
    * 生产环境在部署时注入真实网关地址,例如 https://wo.example.com/api
    */
   readonly VITE_API_BASE_URL?: string
+
+  /**
+   * Agent(项目二)接口根地址。开发环境留空即可 —— 默认 '/api/agent',
+   * 由 vite 代理转发到 10002。生产环境可注入完整网关地址。
+   */
+  readonly VITE_AGENT_BASE_URL?: string
 }
 
 interface ImportMeta {

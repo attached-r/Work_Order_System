@@ -57,6 +57,19 @@ export default defineConfig({
     // 后端没有 context-path,所以要把 /api 前缀改写掉:
     // 前端请求 /api/user/login → 实际打到 http://localhost:10001/user/login
     proxy: {
+      // 步骤 1:Agent 服务(项目二,10002)必须排在 /api 之前 ——
+      // 代理按声明顺序匹配,否则 /api/agent/chat 会被下面的 /api 规则吃掉。
+      // 注意这里**不能 rewrite**:Agent 的控制器本身就以 /api/agent 为前缀,
+      // 去掉 /api 会变成 /agent/chat 从而 404。
+      '/api/agent': {
+        target: 'http://localhost:10002',
+        changeOrigin: true,
+        // SSE 长连接:代理层不要主动超时,否则回答到一半会被掐断。
+        proxyTimeout: 0,
+        timeout: 0,
+      },
+
+      // 步骤 2:项目一(10001)的业务接口,保持原有的去前缀行为。
       '/api': {
         target: 'http://localhost:10001',
         changeOrigin: true,

@@ -11,3 +11,14 @@ export const TOKEN_KEY = 'wo_token'
 
 /** 缓存的当前用户信息(含角色与权限码) */
 export const USER_KEY = 'wo_user'
+
+/**
+ * Agent 对话记录。
+ *
+ * Agent 的会话记忆只存在它自己的进程里(每个 sessionId 最近 20 条),
+ * 刷新页面或重启服务就没了,所以展示用的历史必须由前端自己落盘。
+ */
+export const AGENT_CHAT_KEY = 'wo_agent_chat'
+
+/** Agent 当前选中的会话 id,与消息体分开存,切换会话时不必重写整份历史 */
+export const AGENT_ACTIVE_KEY = 'wo_agent_active'

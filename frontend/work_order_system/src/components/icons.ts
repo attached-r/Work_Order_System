@@ -40,6 +40,15 @@ import {
   Files,
   ArrowLeft,
   Right,
+  MagicStick,
+  Promotion,
+  VideoPause,
+  CopyDocument,
+  Delete,
+  Menu,
+  Close,
+  Bottom,
+  ArrowDownBold,
 } from '@element-plus/icons-vue'
 
 export const ICONS: Record<string, Component> = {
@@ -76,6 +85,15 @@ export const ICONS: Record<string, Component> = {
   Files,
   ArrowLeft,
   Right,
+  MagicStick,
+  Promotion,
+  VideoPause,
+  CopyDocument,
+  Delete,
+  Menu,
+  Close,
+  Bottom,
+  ArrowDownBold,
 }
 
 /** 取图标组件;找不到时返回 undefined,调用方自行兜底 */

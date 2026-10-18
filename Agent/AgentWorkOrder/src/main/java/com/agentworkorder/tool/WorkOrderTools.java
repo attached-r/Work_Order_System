@@ -1,8 +1,6 @@
 package com.agentworkorder.tool;
 
-import com.agentworkorder.audit.AuditContext;
-import com.agentworkorder.audit.ToolCallAuditor;
-import com.agentworkorder.audit.ToolResult;
+import com.agentworkorder.audit.AuditedToolInvoker;
 import com.agentworkorder.client.WorkOrderToolClient;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.annotation.Tool;
@@ -10,7 +8,6 @@ import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
-import java.util.function.Supplier;
 
 /**
  * 暴露给大模型的工具集（M1 只做「读」，M2 在其上加审计埋点）。
@@ -22,7 +19,8 @@ import java.util.function.Supplier;
  * {@link WorkOrderToolClient}。这样即使工具执行线程与请求线程不是同一条，token 也不会丢。
  *
  * <p>M2 的审计埋点放在<b>工具方法边界</b>（而非 HTTP 客户端层）：只有这里能同时拿到会话、追踪、用户、
- * 模型提供方——HTTP 层看得见的只有 URL 与参数。两个 {@code @Tool} 方法都收敛到 {@link #audited} 模板，
+ * 模型提供方——HTTP 层看得见的只有 URL 与参数。两个 {@code @Tool} 方法都收敛到
+ * {@link AuditedToolInvoker} 模板（M3 从本类私有方法抽出，供知识检索工具复用），
  * 于是 mock 与 openai 两条路径（{@code MockLlmClient} 直接调本类方法）都被同一次埋点覆盖。
  */
 @Component
@@ -37,11 +35,11 @@ public class WorkOrderTools {
     public static final String AUTH_HEADER_KEY = ToolContextKeys.AUTHORIZATION;
 
     private final WorkOrderToolClient toolclient;
-    private final ToolCallAuditor auditor;
+    private final AuditedToolInvoker auditedToolInvoker;
 
-    public WorkOrderTools(WorkOrderToolClient client, ToolCallAuditor auditor) {
+    public WorkOrderTools(WorkOrderToolClient client, AuditedToolInvoker auditedToolInvoker) {
         this.toolclient = client;
-        this.auditor = auditor;
+        this.auditedToolInvoker = auditedToolInvoker;
     }
 
     /**
@@ -66,7 +64,7 @@ public class WorkOrderTools {
                 "status", nullSafe(status),
                 "orderType", nullSafe(orderType),
                 "keyword", nullSafe(keyword));
-        return audited("listWorkOrders", args, toolContext,
+        return auditedToolInvoker.invoke("listWorkOrders", args, toolContext,
                 () -> toolclient.listWorkOrders(status, orderType, keyword, tokenOf(toolContext)));
     }
 
@@ -81,40 +79,8 @@ public class WorkOrderTools {
             @ToolParam(description = "工单 ID，整数字符串")
             Long id,
             ToolContext toolContext) {
-        return audited("queryWorkOrder", Map.of("id", id), toolContext,
+        return auditedToolInvoker.invoke("queryWorkOrder", Map.of("id", id), toolContext,
                 () -> toolclient.queryWorkOrder(id, tokenOf(toolContext)));
-    }
-
-    /**
-     * 审计埋点模板：计时包裹一次工具调用，无论成功、业务失败还是抛异常都留一条流水。
-     *
-     * <p>关键纪律——<b>审计只旁观，不改行为</b>：成功时原样返回 {@code body}；抛异常时先记后<b>原样再抛</b>，
-     * 保持与埋点前一致的异常传播语义。
-     *
-     * @param toolName 工具名（须与 {@code @Tool(name=...)} 一致）
-     * @param args     入参（用于审计留痕）
-     * @param ctx      工具上下文（抽取审计字段）
-     * @param call     真正执行调用的动作
-     * @return 工具调用的原始返回体
-     */
-    private String audited(String toolName, Map<String, Object> args, ToolContext ctx, Supplier<String> call) {
-        AuditContext auditContext = AuditContext.from(ctx);
-        String provider = auditContext.provider();
-        long start = System.nanoTime();
-        try {
-            String body = call.get();
-            // inspectCode：非空表示项目一返回的是错误体（HTTP 仍 200，只能看 body 判定成败）
-            auditor.record(auditContext, toolName, args, body, ToolResult.inspectCode(body),
-                    null, elapsedMs(start), provider);
-            return body;
-        } catch (RuntimeException e) {
-            auditor.record(auditContext, toolName, args, null, null, e, elapsedMs(start), provider);
-            throw e;
-        }
-    }
-
-    private static long elapsedMs(long startNanos) {
-        return (System.nanoTime() - startNanos) / 1_000_000L;
     }
 
     /** 把 null 归一成空串，便于审计入参 JSON 化（{@code Map.of} 不接受 null 值）。 */
