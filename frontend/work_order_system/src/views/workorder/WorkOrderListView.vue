@@ -153,6 +153,13 @@ onMounted(() => {
     const n = Number(s)
     if (Number.isFinite(n)) query.status = n
   }
+
+  // 助手回答里的工单链接在新标签页打开时走这个兜底:直接带上编号搜索
+  const k = route.query.keyword
+  if (typeof k === 'string' && k.trim() !== '') {
+    query.keyword = k.trim()
+  }
+
   void ensureUsers()
   void refreshBoth()
 })

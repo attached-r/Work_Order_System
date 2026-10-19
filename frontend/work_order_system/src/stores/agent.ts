@@ -31,6 +31,12 @@ export interface Conversation {
   /** 同时作为发给 Agent 的 sessionId */
   id: string
   title: string
+  /**
+   * 标题是否被用户手动改过。
+   * 首条消息会自动生成标题;用户重命名后要把这个标记置 true,
+   * 否则编辑首条消息时自动标题会把用户起的名字覆盖掉。
+   */
+  titleCustom: boolean
   createdAt: number
   updatedAt: number
   messages: ChatMessage[]
@@ -147,6 +153,8 @@ function normalizeConversation(raw: unknown): Conversation | null {
   return {
     id: raw.id,
     title: rawTitle || (firstUser ? makeTitle(firstUser.content) : DEFAULT_TITLE),
+    // 旧版本数据没有这个字段,一律按「自动标题」处理
+    titleCustom: raw.titleCustom === true,
     createdAt,
     updatedAt,
     messages,
@@ -206,6 +214,7 @@ function buildStorageCopy(
   return conversations.slice(0, maxConversations).map((conversation) => ({
     id: conversation.id,
     title: conversation.title,
+    titleCustom: conversation.titleCustom,
     createdAt: conversation.createdAt,
     updatedAt: conversation.updatedAt,
     messages: conversation.messages.slice(-maxMessages).map((message) => ({
@@ -344,6 +353,7 @@ export const useAgentStore = defineStore('agent', () => {
     const conversation: Conversation = {
       id: newId(),
       title: DEFAULT_TITLE,
+      titleCustom: false,
       createdAt: now,
       updatedAt: now,
       messages: [],
@@ -392,6 +402,63 @@ export const useAgentStore = defineStore('agent', () => {
     saveHistory()
   }
 
+  /**
+   * 重命名会话。
+   *
+   * 刻意不改 updatedAt:分组和排序都按「最后对话时间」走,
+   * 单纯改个名字不应该把会话顶到列表最前面。
+   */
+  function renameConversation(id: string, title: string): boolean {
+    const conversation = conversations.value.find((c) => c.id === id)
+    if (!conversation) return false
+
+    const chars = Array.from(title.trim())
+    if (chars.length === 0) return false
+
+    conversation.title = chars.length > 40 ? `${chars.slice(0, 40).join('')}…` : chars.join('')
+    conversation.titleCustom = true
+    saveHistory()
+    return true
+  }
+
+  /**
+   * 强制作废当前流。
+   *
+   * 只调 stop() 不够:abort 后 runStream 的 finally 仍会走一遍收尾并 saveHistory(),
+   * 清空全部后它会再把空数组写回 localStorage。这里把 streamSeq 推进一格,
+   * 旧流的 catch/finally 看到序号不匹配就直接退出,不再碰状态和存储。
+   */
+  function invalidateStream(): void {
+    controller?.abort()
+    controller = null
+    streamSeq += 1
+
+    if (rafId !== null) {
+      cancelAnimationFrame(rafId)
+      rafId = null
+    }
+    pendingDelta = ''
+    flushTarget = null
+
+    streaming.value = false
+    streamingConversationId.value = null
+  }
+
+  /** 清空本机所有对话;正在生成时先强制中止,避免旧流把数据写回来 */
+  function clearAllConversations(): void {
+    if (streaming.value) invalidateStream()
+
+    conversations.value = []
+    activeId.value = null
+
+    try {
+      localStorage.removeItem(AGENT_CHAT_KEY)
+      localStorage.removeItem(AGENT_ACTIVE_KEY)
+    } catch {
+      // 存储不可用时忽略:内存里已经清空
+    }
+  }
+
   // ---- 流式对话 ----
 
   /**
@@ -424,7 +491,10 @@ export const useAgentStore = defineStore('agent', () => {
         createdAt: now,
         status: 'done',
       })
-      if (isFirstUserMessage) conversation.title = makeTitle(prompt)
+      // 用户手动改过标题就不再自动覆盖
+      if (isFirstUserMessage && !conversation.titleCustom) {
+        conversation.title = makeTitle(prompt)
+      }
     }
 
     // 步骤 2:先放一个空的 assistant 占位,流式内容直接往里追加
@@ -461,6 +531,8 @@ export const useAgentStore = defineStore('agent', () => {
         message: prompt,
         signal: controller.signal,
         onDelta: (delta) => {
+          // 被强制作废的旧流即使还有残余 token 到来,也不能污染新的流
+          if (seq !== streamSeq) return
           pendingDelta += delta
           scheduleFlush()
         },
@@ -577,6 +649,60 @@ export const useAgentStore = defineStore('agent', () => {
     regenerateLast()
   }
 
+  /**
+   * 编辑最后一条用户消息并重新发送。
+   *
+   * 语义上等于「把对话回退到这条提问,再问一次」:
+   *   1. 校验必须是非流式、消息存在且是最后一条 user 消息;
+   *   2. 改写它的内容,并删掉它之后的所有消息(旧回答已失效);
+   *   3. runStream(appendUser=false) 复用这条用户消息,不再重复追加。
+   *
+   * 返回 false 表示被校验挡下,页面据此提示。
+   */
+  function editAndResend(messageId: string, text: string): boolean {
+    if (streaming.value) return false
+
+    const content = text.trim()
+    if (!content || content.length > MAX_MESSAGE_LENGTH) return false
+
+    const conversation = activeConversation.value
+    if (!conversation) return false
+
+    const { messages } = conversation
+    const index = messages.findIndex((m) => m.id === messageId)
+    const message = messages[index]
+    if (!message || message.role !== 'user') return false
+
+    // 只允许编辑最后一轮提问:改更早的问题会让中间的回答失去上下文
+    let lastUserIndex = -1
+    for (let i = messages.length - 1; i >= 0; i -= 1) {
+      if (messages[i]?.role === 'user') {
+        lastUserIndex = i
+        break
+      }
+    }
+    if (lastUserIndex !== index) return false
+
+    const isFirstUserMessage = messages.findIndex((m) => m.role === 'user') === index
+
+    // 步骤 1:改写提问,顺手清掉可能残留的错误状态
+    message.content = content
+    message.status = 'done'
+    message.error = null
+
+    // 步骤 2:旧回答全部作废
+    messages.splice(index + 1)
+
+    // 步骤 3:首条提问且标题仍是自动生成的,同步更新标题
+    if (isFirstUserMessage && !conversation.titleCustom) {
+      conversation.title = makeTitle(content)
+    }
+
+    // 步骤 4:复用这条用户消息重新流式输出
+    void runStream(conversation, content, false)
+    return true
+  }
+
   return {
     // 状态
     conversations,
@@ -590,10 +716,13 @@ export const useAgentStore = defineStore('agent', () => {
     createConversation,
     selectConversation,
     deleteConversation,
+    renameConversation,
+    clearAllConversations,
     // 对话操作
     send,
     stop,
     regenerateLast,
     retryLast,
+    editAndResend,
   }
 })

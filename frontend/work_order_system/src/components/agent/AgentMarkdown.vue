@@ -8,40 +8,74 @@
 import { computed } from 'vue'
 import { renderMarkdown } from '@/utils/markdown'
 import { copyText } from '@/utils/clipboard'
+import type { WorkOrderRef } from '@/utils/workOrderRef'
 
 const props = withDefaults(
   defineProps<{
     content: string
     /** 正在流式输出:在最后一段末尾显示闪烁光标 */
     streaming?: boolean
+    /** 是否把回答里的工单引用渲染成可点击链接(由页面按权限传入) */
+    enableWorkOrderLinks?: boolean
   }>(),
-  { streaming: false },
+  { streaming: false, enableWorkOrderLinks: false },
 )
 
-const html = computed(() => renderMarkdown(props.content))
+const emit = defineEmits<{
+  /** 点击工单引用;解析 id / 导航由页面负责,Markdown 层不碰路由和接口 */
+  'open-workorder': [ref: WorkOrderRef]
+}>()
+
+const html = computed(() =>
+  renderMarkdown(props.content, { workOrderLinks: props.enableWorkOrderLinks }),
+)
 
 /**
- * 代码块复制。
+ * 统一的事件委托。
  *
- * 代码块是 v-html 生成的,DOM 节点上绑不了 Vue 事件,
- * 所以在外层容器统一监听点击,再向上找按钮。
+ * 代码块和工单链接都是 v-html 生成的,DOM 节点上绑不了 Vue 事件,
+ * 所以在外层容器监听点击,再向上找目标。
+ * 先处理代码复制,再处理工单跳转,两者互不干扰。
  */
 async function handleClick(event: MouseEvent) {
   const target = event.target
   if (!(target instanceof Element)) return
 
+  // 步骤 1:代码块复制
   const button = target.closest<HTMLButtonElement>('[data-copy-code]')
-  if (!button) return
+  if (button) {
+    const code = button.closest('.md-code')?.querySelector('code')?.textContent ?? ''
+    if (!code) return
 
-  const code = button.closest('.md-code')?.querySelector('code')?.textContent ?? ''
-  if (!code) return
+    const ok = await copyText(code)
+    const original = button.textContent ?? '复制'
+    button.textContent = ok ? '已复制' : '复制失败'
+    window.setTimeout(() => {
+      button.textContent = original
+    }, 1600)
+    return
+  }
 
-  const ok = await copyText(code)
-  const original = button.textContent ?? '复制'
-  button.textContent = ok ? '已复制' : '复制失败'
-  window.setTimeout(() => {
-    button.textContent = original
-  }, 1600)
+  // 步骤 2:工单引用
+  const link = target.closest<HTMLAnchorElement>('a.md-workorder')
+  if (!link) return
+
+  // 中键 / 带修饰键时保留浏览器原生行为(新标签页打开 href)
+  if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+    return
+  }
+
+  event.preventDefault()
+
+  const idAttr = link.dataset.workOrderId
+  const orderNo = link.dataset.workOrderNo
+
+  if (idAttr) {
+    const id = Number(idAttr)
+    if (Number.isSafeInteger(id) && id > 0) emit('open-workorder', { id })
+    return
+  }
+  if (orderNo) emit('open-workorder', { orderNo })
 }
 </script>
 
@@ -226,6 +260,29 @@ async function handleClick(event: MouseEvent) {
     color: var(--wo-brand);
     text-decoration: underline;
     text-underline-offset: 2px;
+  }
+
+  // 工单引用:虚线强调「这是可跳转的实体」,和普通外链区分开
+  :deep(.md-workorder) {
+    padding: 0 2px;
+    border-radius: 3px;
+    color: var(--wo-brand);
+    font-weight: 600;
+    text-decoration: underline dashed;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+    cursor: pointer;
+    transition: background-color var(--wo-dur-fast) var(--wo-ease);
+
+    &:hover {
+      background: var(--wo-brand-wash);
+      text-decoration-style: solid;
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--wo-hairline-brand);
+      outline-offset: 1px;
+    }
   }
 
   :deep(img) {

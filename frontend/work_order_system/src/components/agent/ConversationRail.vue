@@ -7,7 +7,7 @@
  */
 import { computed } from 'vue'
 import { ElMessageBox } from 'element-plus'
-import { Close, Delete, Plus } from '@element-plus/icons-vue'
+import { Close, MoreFilled, Plus } from '@element-plus/icons-vue'
 import { formatRelative } from '@/utils/datetime'
 import type { Conversation } from '@/stores/agent'
 
@@ -22,8 +22,14 @@ const emit = defineEmits<{
   select: [id: string]
   new: []
   delete: [id: string]
+  rename: [id: string, title: string]
+  export: [conversation: Conversation]
+  clear: []
   close: []
 }>()
+
+/** 会话项下拉菜单的命令 */
+type ConvCommand = 'rename' | 'export' | 'delete'
 
 interface DateGroup {
   label: string
@@ -91,6 +97,63 @@ async function handleDelete(conversation: Conversation): Promise<void> {
   }
   emit('delete', conversation.id)
 }
+
+async function handleRename(conversation: Conversation): Promise<void> {
+  let raw: unknown
+  try {
+    // prompt 的返回值是联合类型,先按 unknown 接住再窄化,避免直接读 .value
+    const result: unknown = await ElMessageBox.prompt('输入新的对话标题', '重命名对话', {
+      confirmButtonText: '保存',
+      cancelButtonText: '取消',
+      inputValue: conversation.title,
+      inputPlaceholder: '对话标题',
+      inputValidator: (value: string) => {
+        const title = value.trim()
+        if (!title) return '标题不能为空'
+        if (Array.from(title).length > 40) return '标题不能超过 40 个字符'
+        return true
+      },
+    })
+    raw = typeof result === 'object' && result !== null && 'value' in result ? result.value : null
+  } catch {
+    return // 用户取消
+  }
+
+  if (typeof raw !== 'string') return
+  const title = raw.trim()
+  // 没改就不落盘,也不必刷新列表
+  if (!title || title === conversation.title) return
+  emit('rename', conversation.id, title)
+}
+
+/** 下拉菜单统一入口:重命名 / 导出 / 删除 */
+function handleCommand(command: unknown, conversation: Conversation): void {
+  if (command === 'rename') {
+    void handleRename(conversation)
+  } else if (command === 'export') {
+    emit('export', conversation)
+  } else if (command === 'delete') {
+    void handleDelete(conversation)
+  }
+}
+
+async function handleClearAll(): Promise<void> {
+  try {
+    await ElMessageBox.confirm(
+      '清空后所有对话记录都会从本机删除且无法恢复' +
+        (props.streamingConversationId ? '，正在生成的回答也会立即停止。' : '。'),
+      '清空全部对话',
+      {
+        confirmButtonText: '清空',
+        cancelButtonText: '取消',
+        type: 'warning',
+      },
+    )
+  } catch {
+    return // 用户取消
+  }
+  emit('clear')
+}
 </script>
 
 <template>
@@ -136,14 +199,24 @@ async function handleDelete(conversation: Conversation): Promise<void> {
               </span>
             </button>
 
-            <button
-              type="button"
-              class="rail-conv__del"
-              title="删除对话"
-              @click.stop="handleDelete(conversation)"
+            <!-- 更多操作:触发器必须是主按钮的兄弟节点,不能嵌套 button -->
+            <el-dropdown
+              trigger="click"
+              placement="bottom-end"
+              @command="handleCommand($event, conversation)"
             >
-              <el-icon :size="13"><Delete /></el-icon>
-            </button>
+              <button type="button" class="rail-conv__more" title="更多操作">
+                <el-icon :size="13"><MoreFilled /></el-icon>
+              </button>
+
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="rename">重命名</el-dropdown-item>
+                  <el-dropdown-item command="export">导出 Markdown</el-dropdown-item>
+                  <el-dropdown-item command="delete" divided>删除</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
           </li>
         </ul>
       </section>
@@ -151,7 +224,17 @@ async function handleDelete(conversation: Conversation): Promise<void> {
       <p v-if="conversations.length === 0" class="rail__empty">还没有对话</p>
     </div>
 
-    <p class="rail__foot">对话记录仅保存在本机浏览器</p>
+    <div class="rail__foot">
+      <button
+        v-if="conversations.length > 0"
+        type="button"
+        class="rail__clear"
+        @click="handleClearAll"
+      >
+        清空全部
+      </button>
+      <p>对话记录仅保存在本机浏览器</p>
+    </div>
   </aside>
 </template>
 
@@ -348,8 +431,8 @@ async function handleDelete(conversation: Conversation): Promise<void> {
   }
 }
 
-// 删除按钮默认隐藏,悬浮/聚焦/触屏时出现
-.rail-conv__del {
+// 更多操作默认隐藏,悬浮/聚焦/触屏时出现
+.rail-conv__more {
   display: grid;
   place-items: center;
   width: 26px;
@@ -368,13 +451,13 @@ async function handleDelete(conversation: Conversation): Promise<void> {
     background-color var(--wo-dur-fast) var(--wo-ease);
 
   &:hover {
-    color: var(--wo-st-5-fg);
-    background: var(--wo-st-5-bg);
+    color: var(--wo-brand);
+    background: var(--wo-brand-wash);
   }
 }
 
-.rail-conv:hover .rail-conv__del,
-.rail-conv:focus-within .rail-conv__del {
+.rail-conv:hover .rail-conv__more,
+.rail-conv:focus-within .rail-conv__more {
   opacity: 1;
 }
 
@@ -387,11 +470,38 @@ async function handleDelete(conversation: Conversation): Promise<void> {
 
 .rail__foot {
   flex: none;
-  padding: 10px 4px 2px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px 2px;
   border-top: 1px solid var(--wo-hairline);
   font-size: 10.5px;
   color: var(--wo-ink-4);
   text-align: center;
+
+  p {
+    margin: 0;
+  }
+}
+
+.rail__clear {
+  padding: 2px 8px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--wo-ink-4);
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  transition:
+    color var(--wo-dur-fast) var(--wo-ease),
+    background-color var(--wo-dur-fast) var(--wo-ease);
+
+  &:hover {
+    color: var(--wo-st-5-fg);
+    background: var(--wo-st-5-bg);
+  }
 }
 
 @media (max-width: 960px) {
@@ -406,7 +516,7 @@ async function handleDelete(conversation: Conversation): Promise<void> {
 }
 
 @media (hover: none) {
-  .rail-conv__del {
+  .rail-conv__more {
     opacity: 1;
   }
 }

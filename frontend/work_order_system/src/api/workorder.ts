@@ -53,6 +53,19 @@ export function pageWorkOrders(query: WorkOrderQuery): Promise<PageResult<WorkOr
 }
 
 /**
+ * 用展示编号(WO + 14 位)反查内部数字 id。
+ *
+ * 详情接口只认数字 id,而助手回答里给用户看的是 orderNo,所以跳转前必须先解析。
+ * keyword 会同时匹配标题和编号,必须再做一次精确比较,不能拿到第一条就用。
+ *
+ * 返回 null 表示「搜不到」——可能是编号不存在,也可能是当前账号的数据范围看不到。
+ */
+export async function resolveWorkOrderIdByNo(orderNo: string): Promise<number | null> {
+  const page = await pageWorkOrders({ current: 1, size: 20, keyword: orderNo })
+  return page.records.find((record) => record.orderNo === orderNo)?.id ?? null
+}
+
+/**
  * 工单统计:总数与各状态数量,数据范围与列表一致。
  * 刻意不接受 status —— 状态筛选条各档的数量必须在切换状态时保持稳定。
  */

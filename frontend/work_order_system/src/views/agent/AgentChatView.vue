@@ -11,6 +11,7 @@
  * 页面内部只有消息区滚动,页头和输入区固定。
  */
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
   Bottom,
@@ -28,11 +29,21 @@ import ConversationRail from '@/components/agent/ConversationRail.vue'
 import ChatMessageItem from '@/components/agent/ChatMessageItem.vue'
 import ChatComposer from '@/components/agent/ChatComposer.vue'
 import { useAgentStore } from '@/stores/agent'
+import type { Conversation } from '@/stores/agent'
 import { useUserStore } from '@/stores/user'
 import { copyText } from '@/utils/clipboard'
+import { exportConversationAsMarkdown } from '@/utils/exportChat'
+import { resolveWorkOrderIdByNo } from '@/api'
+import { MAX_MESSAGE_LENGTH } from '@/api/agent'
+import type { WorkOrderRef } from '@/utils/workOrderRef'
 
 const agentStore = useAgentStore()
 const userStore = useUserStore()
+const route = useRoute()
+const router = useRouter()
+
+/** 解析 orderNo 期间防重入:双击同一条链接只发一次查询 */
+const resolvingWorkOrder = ref(false)
 
 /** 输入框草稿;真正的发送由 ChatComposer 通过 send 事件交出来 */
 const draft = ref('')
@@ -59,6 +70,30 @@ const conversations = computed(() => agentStore.conversations)
 const activeTitle = computed(() => agentStore.activeConversation?.title ?? '新对话')
 const isLogged = computed(() => userStore.isLogged)
 const canQuery = computed(() => userStore.hasPerm('workorder:query'))
+
+/** 最后一条用户消息的下标:只有它能编辑后重发 */
+const lastUserIndex = computed(() => {
+  for (let i = messages.value.length - 1; i >= 0; i -= 1) {
+    if (messages.value[i]?.role === 'user') return i
+  }
+  return -1
+})
+
+/**
+ * 建议追问:只在「最后一条是正常完成的回答」时出现。
+ * 流式进行中、报错、手动停止都不打扰用户。
+ */
+const followUps = computed<string[]>(() => {
+  const last = messages.value[messages.value.length - 1]
+  if (!last || last.role !== 'assistant' || last.status !== 'done' || !last.content) return []
+  if (streaming.value) return []
+
+  const list: string[] = []
+  // 没有工单查询权限的账号不展示数据类追问,免得问了也查不到
+  if (canQuery.value) list.push('我的待处理工单有哪些?')
+  list.push('被驳回后如何修改并重新提交?', '工单超时了怎么处理?')
+  return list
+})
 
 /** 空态建议:全部围绕工单域,点一下直接发问 */
 const suggestions = [
@@ -136,7 +171,8 @@ function handleScroll(): void {
 const tailSignature = computed(() => {
   const list = messages.value
   const last = list[list.length - 1]
-  return `${list.length}:${last?.content.length ?? 0}:${last?.status ?? ''}`
+  // 追问 chip 是在回答结束后才出现的,把数量纳入签名,出现时也能自动贴底
+  return `${list.length}:${last?.content.length ?? 0}:${last?.status ?? ''}:${followUps.value.length}`
 })
 
 watch(
@@ -180,6 +216,26 @@ function handleDelete(id: string): void {
   agentStore.deleteConversation(id)
 }
 
+function handleRename(id: string, title: string): void {
+  agentStore.renameConversation(id, title)
+}
+
+function handleExport(conversation: Conversation): void {
+  try {
+    exportConversationAsMarkdown(conversation)
+    ElMessage.success('已导出 Markdown')
+  } catch {
+    ElMessage.error('导出失败,请稍后重试')
+  }
+}
+
+function handleClearAll(): void {
+  agentStore.clearAllConversations()
+  pinned.value = true
+  showJump.value = false
+  void nextTick(settleScroll)
+}
+
 // ---------------------------------------------------------------------------
 // 消息操作
 // ---------------------------------------------------------------------------
@@ -220,17 +276,115 @@ function handleRetry(): void {
   agentStore.retryLast()
 }
 
+/** 编辑最后一条用户消息并重发;store 会做最终校验 */
+function handleEdit(messageId: string, text: string): void {
+  const accepted = agentStore.editAndResend(messageId, text)
+  if (!accepted) {
+    ElMessage.warning('这条消息无法编辑重发,请确认助手没有正在生成')
+    return
+  }
+  pinned.value = true
+  void nextTick(() => scrollToBottom('auto'))
+}
+
+/**
+ * 点击回答里的工单引用。
+ *
+ * 数字 ID 可以直接跳;展示编号必须先反查内部 id。
+ * 权限在这里再挡一层:即使链接被渲染出来,没有 workorder:query 也不发起查询。
+ */
+async function handleOpenWorkOrder(ref: WorkOrderRef): Promise<void> {
+  if (!canQuery.value) {
+    ElMessage.warning('当前账号没有工单查询权限')
+    return
+  }
+  if (resolvingWorkOrder.value) return
+
+  if (ref.id !== undefined) {
+    if (!Number.isSafeInteger(ref.id) || ref.id <= 0) return
+    void router.push({ name: 'workorder-detail', params: { id: ref.id } })
+    return
+  }
+
+  if (!ref.orderNo) return
+
+  resolvingWorkOrder.value = true
+  try {
+    const id = await resolveWorkOrderIdByNo(ref.orderNo)
+    if (id === null) {
+      ElMessage.warning(`未找到工单 ${ref.orderNo},可能不在你的数据范围内`)
+      return
+    }
+    void router.push({ name: 'workorder-detail', params: { id } })
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : '打开工单失败,请稍后重试')
+  } finally {
+    resolvingWorkOrder.value = false
+  }
+}
+
+function handleFollowUp(prompt: string): void {
+  handleSend(prompt)
+}
+
 // ---------------------------------------------------------------------------
 // 生命周期
 // ---------------------------------------------------------------------------
 
-/** Esc 关闭移动端抽屉 */
+/**
+ * 消费工单详情页带来的 `?ask=` 预填。
+ *
+ * 只写入草稿、不自动发送,用户可以改完再问。
+ * 处理完立刻用 replace 清掉参数:刷新或后退都不该再次覆盖当前草稿。
+ */
+function consumeAskQuery(): void {
+  const raw = route.query.ask
+  const ask = Array.isArray(raw) ? raw[0] : raw
+  if (typeof ask !== 'string' || !ask.trim()) return
+
+  // 截到发送上限,避免预填的内容 store 直接拒收
+  draft.value = ask.slice(0, MAX_MESSAGE_LENGTH)
+  void nextTick(() => composerRef.value?.focus())
+
+  const nextQuery = { ...route.query }
+  delete nextQuery.ask
+  void router.replace({ name: 'agent-chat', query: nextQuery })
+}
+
+// 已经停留在 /agent 时再次点「问助手」,路由不变但 query 会更新
+watch(
+  () => route.query.ask,
+  () => consumeAskQuery(),
+)
+
+/**
+ * 全局快捷键:
+ *   Esc       —— 先关移动端抽屉;没有抽屉时停止生成
+ *   Ctrl/Cmd+K —— 新建对话
+ *
+ * 输入法组合中、消息框正在编辑(已 stopPropagation)、弹窗打开时都不响应。
+ */
 function handleKeydown(event: KeyboardEvent): void {
-  if (event.key === 'Escape') railOpen.value = false
+  if (event.defaultPrevented || event.isComposing) return
+  if (event.target instanceof Element && event.target.closest('.el-overlay')) return
+
+  if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === 'k') {
+    event.preventDefault()
+    handleNewChat()
+    return
+  }
+
+  if (event.key !== 'Escape') return
+  if (railOpen.value) {
+    railOpen.value = false
+    return
+  }
+  if (streaming.value) agentStore.stop()
 }
 
 onMounted(() => {
   window.addEventListener('keydown', handleKeydown)
+  consumeAskQuery()
   void nextTick(settleScroll)
 })
 
@@ -253,6 +407,9 @@ onUnmounted(() => {
         @select="handleSelect"
         @new="handleNewChat"
         @delete="handleDelete"
+        @rename="handleRename"
+        @export="handleExport"
+        @clear="handleClearAll"
         @close="railOpen = false"
       />
     </div>
@@ -305,11 +462,30 @@ onUnmounted(() => {
                 :key="message.id"
                 :message="message"
                 :is-last-assistant="index === messages.length - 1 && message.role === 'assistant'"
+                :is-last-user="index === lastUserIndex"
                 :busy="streaming"
+                :enable-work-order-links="canQuery"
                 @copy="handleCopy"
                 @regenerate="handleRegenerate"
                 @retry="handleRetry"
+                @edit="handleEdit"
+                @open-workorder="handleOpenWorkOrder"
               />
+
+              <!-- 建议追问:只在最后一条回答正常结束后出现 -->
+              <div v-if="followUps.length" class="chat-followups">
+                <span class="chat-followups__label">继续追问</span>
+                <button
+                  v-for="item in followUps"
+                  :key="item"
+                  type="button"
+                  class="chat-followups__chip"
+                  :disabled="streaming || !isLogged"
+                  @click="handleFollowUp(item)"
+                >
+                  {{ item }}
+                </button>
+              </div>
             </template>
 
             <!-- 空态:欢迎 + 建议问题 -->
@@ -556,6 +732,49 @@ onUnmounted(() => {
 .jump-leave-to {
   opacity: 0;
   transform: translateY(4px);
+}
+
+// ---------------------------------------------------------------------------
+// 建议追问
+// ---------------------------------------------------------------------------
+.chat-followups {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  // 与助手正文左对齐(头像 32px + 间距 12px)
+  padding: 2px 0 6px 44px;
+}
+
+.chat-followups__label {
+  font-size: 11px;
+  color: var(--wo-ink-4);
+}
+
+.chat-followups__chip {
+  padding: 5px 12px;
+  border: 1px solid var(--wo-hairline);
+  border-radius: 999px;
+  background: var(--wo-surface);
+  color: var(--wo-ink-2);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    color var(--wo-dur-fast) var(--wo-ease),
+    border-color var(--wo-dur-fast) var(--wo-ease),
+    background-color var(--wo-dur-fast) var(--wo-ease);
+
+  &:hover:not(:disabled) {
+    color: var(--wo-brand);
+    border-color: var(--wo-hairline-brand);
+    background: var(--wo-brand-wash);
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
 }
 
 // ---------------------------------------------------------------------------

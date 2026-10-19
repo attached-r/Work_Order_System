@@ -12,7 +12,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 // 裸图标名不会被 resolver 自动解析,必须显式导入
-import { ArrowLeft, InfoFilled, Right } from '@element-plus/icons-vue'
+import { ArrowLeft, InfoFilled, MagicStick, Right } from '@element-plus/icons-vue'
 import StatusTag from '@/components/StatusTag.vue'
 import PriorityTag from '@/components/PriorityTag.vue'
 import {
@@ -214,6 +214,27 @@ async function confirmTerminalHint() {
   })
 }
 
+/**
+ * 带着当前工单上下文去问助手。
+ *
+ * 只做「预填草稿」不自动发送:用户可能想补充自己的问题,也避免一进页面就消耗一次模型调用。
+ */
+function askAgent(): void {
+  const current = detail.value
+  if (!current) return
+
+  // 标题可能很长,截断后仍保留足够的语义
+  const title = Array.from(current.title).slice(0, 80).join('')
+  const prompt = [
+    `请帮我分析工单 ${current.orderNo}(内部 ID ${current.id})。`,
+    `标题:${title}`,
+    `当前状态:${getStatusLabel(current.status)}`,
+    '请结合它的资源明细和操作日志,说明现在处于什么阶段、接下来应该由谁做什么、有哪些风险。',
+  ].join('\n')
+
+  void router.push({ name: 'agent-chat', query: { ask: prompt } })
+}
+
 onMounted(() => {
   void load()
   // 目录只用于补名字,失败了也不影响工单本身,所以不 await、不阻塞
@@ -229,6 +250,12 @@ onMounted(() => {
       <el-button text class="back" @click="router.push({ name: 'workorder-list' })">
         <el-icon><ArrowLeft /></el-icon>
         返回列表
+      </el-button>
+
+      <!-- 带着工单编号与内部 ID 跳转到助手,预填但不自动发送 -->
+      <el-button v-if="detail" plain class="ask-agent" @click="askAgent">
+        <el-icon><MagicStick /></el-icon>
+        问助手
       </el-button>
     </div>
 
@@ -475,7 +502,23 @@ onMounted(() => {
 
 <style scoped lang="scss">
 .detail__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   margin-bottom: var(--wo-space-3);
+}
+
+.ask-agent {
+  flex: none;
+  color: var(--wo-brand);
+  border-color: var(--wo-hairline-brand);
+
+  &:hover {
+    color: var(--wo-brand-hover);
+    border-color: var(--wo-brand);
+    background: var(--wo-brand-wash);
+  }
 }
 
 .back {

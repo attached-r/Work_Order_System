@@ -5,25 +5,33 @@
  * 用户消息走纯文本气泡(不做 Markdown),助手消息走 Markdown。
  * 这样既能避免用户输入里的 `*` / `#` 被误渲染,也让两类消息在视觉上区分得开。
  */
-import { computed } from 'vue'
-import { CopyDocument, MagicStick, RefreshRight } from '@element-plus/icons-vue'
+import { computed, nextTick, ref } from 'vue'
+import { CopyDocument, EditPen, MagicStick, RefreshRight } from '@element-plus/icons-vue'
 import AgentMarkdown from './AgentMarkdown.vue'
 import { useUserStore } from '@/stores/user'
 import { formatClock } from '@/utils/datetime'
+import { MAX_MESSAGE_LENGTH } from '@/api/agent'
 import type { ChatMessage } from '@/stores/agent'
+import type { WorkOrderRef } from '@/utils/workOrderRef'
 
 const props = defineProps<{
   message: ChatMessage
   /** 是否是当前最后一条 assistant 消息(只有它可以重新生成) */
   isLastAssistant: boolean
+  /** 是否是当前最后一条 user 消息(只有它可以编辑后重发) */
+  isLastUser: boolean
   /** 任意一条消息正在流式输出(此时禁用重新生成,避免并发) */
   busy: boolean
+  /** 是否把助手回答里的工单引用渲染成链接 */
+  enableWorkOrderLinks: boolean
 }>()
 
 const emit = defineEmits<{
   copy: [text: string]
   regenerate: []
   retry: []
+  edit: [messageId: string, text: string]
+  'open-workorder': [ref: WorkOrderRef]
 }>()
 
 const userStore = useUserStore()
@@ -35,6 +43,69 @@ const time = computed(() => formatClock(new Date(props.message.createdAt).toISOS
 /** 错误/停止状态需要额外的提示条;正常结束不显示 */
 const showError = computed(() => props.message.status === 'error')
 const showStopped = computed(() => props.message.status === 'stopped')
+
+// ---------------------------------------------------------------------------
+// 用户消息的内联编辑
+// ---------------------------------------------------------------------------
+
+const editing = ref(false)
+const editText = ref('')
+const editTextareaRef = ref<HTMLTextAreaElement | null>(null)
+/** 中文输入法组合期间的回车是「选词」,不能当成提交 */
+const composing = ref(false)
+
+const canEdit = computed(
+  () => isUser.value && props.isLastUser && !props.busy && !isStreaming.value,
+)
+
+const canSubmitEdit = computed(() => {
+  const text = editText.value.trim()
+  return text.length > 0 && text.length <= MAX_MESSAGE_LENGTH
+})
+
+function startEdit(): void {
+  editText.value = props.message.content
+  editing.value = true
+  // 等 textarea 渲染出来再聚焦,并把光标放到末尾
+  void nextTick(() => {
+    const el = editTextareaRef.value
+    if (!el) return
+    el.focus()
+    el.setSelectionRange(el.value.length, el.value.length)
+  })
+}
+
+function cancelEdit(): void {
+  editing.value = false
+  editText.value = ''
+}
+
+function submitEdit(): void {
+  const text = editText.value.trim()
+  // 没改动就不重发;父组件的「重新生成」已经覆盖了这个场景
+  if (!text || text === props.message.content) {
+    cancelEdit()
+    return
+  }
+  emit('edit', props.message.id, text)
+  editing.value = false
+}
+
+/** Enter 提交、Shift+Enter 换行、Esc 取消(阻止冒泡,避免触发全局「停止生成」) */
+function handleEditKeydown(event: KeyboardEvent): void {
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    event.stopPropagation()
+    cancelEdit()
+    return
+  }
+
+  if (event.key !== 'Enter' || event.shiftKey) return
+  if (composing.value || event.isComposing || event.keyCode === 229) return
+
+  event.preventDefault()
+  if (canSubmitEdit.value) submitEdit()
+}
 </script>
 
 <template>
@@ -51,8 +122,38 @@ const showStopped = computed(() => props.message.status === 'stopped')
         <time class="wo-num" :datetime="new Date(message.createdAt).toISOString()">{{ time }}</time>
       </header>
 
-      <!-- 用户:纯文本气泡 -->
-      <div v-if="isUser" class="msg__bubble">{{ message.content }}</div>
+      <!-- 用户:纯文本气泡;编辑时原地换成 textarea -->
+      <template v-if="isUser">
+        <div v-if="!editing" class="msg__bubble">{{ message.content }}</div>
+
+        <div v-else class="msg__editor">
+          <textarea
+            ref="editTextareaRef"
+            v-model="editText"
+            class="msg__editor-input"
+            :maxlength="MAX_MESSAGE_LENGTH"
+            rows="3"
+            @keydown="handleEditKeydown"
+            @compositionstart="composing = true"
+            @compositionend="composing = false"
+          ></textarea>
+
+          <div class="msg__editor-bar">
+            <span class="wo-num msg__editor-count">
+              {{ editText.length }}/{{ MAX_MESSAGE_LENGTH }}
+            </span>
+            <button type="button" class="msg__editor-btn" @click="cancelEdit">取消</button>
+            <button
+              type="button"
+              class="msg__editor-btn msg__editor-btn--primary"
+              :disabled="!canSubmitEdit"
+              @click="submitEdit"
+            >
+              保存并重发
+            </button>
+          </div>
+        </div>
+      </template>
 
       <!-- 助手:Markdown 正文 -->
       <div v-else class="msg__answer">
@@ -65,6 +166,8 @@ const showStopped = computed(() => props.message.status === 'stopped')
           v-if="message.content"
           :content="message.content"
           :streaming="isStreaming"
+          :enable-work-order-links="enableWorkOrderLinks"
+          @open-workorder="emit('open-workorder', $event)"
         />
 
         <div v-if="showError" class="msg__notice msg__notice--error">
@@ -93,11 +196,17 @@ const showStopped = computed(() => props.message.status === 'stopped')
         </div>
       </div>
 
-      <!-- 操作行:平时低对比,悬浮/聚焦才显形 -->
-      <footer v-if="message.content" class="msg__actions">
+      <!-- 操作行:平时低对比,悬浮/聚焦才显形;编辑中隐藏,避免误触 -->
+      <footer v-if="message.content && !editing" class="msg__actions">
         <button type="button" title="复制" @click="emit('copy', message.content)">
           <el-icon :size="14"><CopyDocument /></el-icon>
           <span>复制</span>
+        </button>
+
+        <!-- 只有最后一条用户消息可以编辑;改了它意味着后续回答全部作废 -->
+        <button v-if="canEdit" type="button" title="编辑并重新发送" @click="startEdit">
+          <el-icon :size="14"><EditPen /></el-icon>
+          <span>编辑</span>
         </button>
 
         <button
@@ -197,6 +306,85 @@ const showStopped = computed(() => props.message.status === 'stopped')
   line-height: 1.7;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+// 内联编辑器:与气泡同宽、同色,编辑时视觉位置不跳
+.msg__editor {
+  width: min(76%, 620px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.msg__editor-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 9px 14px;
+  border: 1px solid var(--wo-hairline-brand);
+  border-radius: var(--wo-radius-lg);
+  background: var(--wo-surface);
+  color: var(--wo-ink-1);
+  font-family: inherit;
+  font-size: 14.5px;
+  line-height: 1.7;
+  resize: vertical;
+  min-height: 76px;
+
+  &:focus {
+    outline: none;
+    border-color: var(--wo-brand);
+    box-shadow: 0 0 0 3px var(--wo-brand-wash);
+  }
+}
+
+.msg__editor-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.msg__editor-count {
+  margin-right: auto;
+  font-size: 11px;
+  color: var(--wo-ink-4);
+}
+
+.msg__editor-btn {
+  padding: 5px 12px;
+  border: 1px solid var(--wo-hairline);
+  border-radius: var(--wo-radius-sm);
+  background: var(--wo-surface);
+  color: var(--wo-ink-2);
+  font-family: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition:
+    color var(--wo-dur-fast) var(--wo-ease),
+    border-color var(--wo-dur-fast) var(--wo-ease),
+    background-color var(--wo-dur-fast) var(--wo-ease);
+
+  &:hover:not(:disabled) {
+    color: var(--wo-brand);
+    border-color: var(--wo-hairline-brand);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.msg__editor-btn--primary {
+  border-color: var(--wo-brand);
+  background: var(--wo-brand);
+  color: #fff;
+
+  &:hover:not(:disabled) {
+    color: #fff;
+    background: var(--wo-brand-hover);
+    border-color: var(--wo-brand-hover);
+  }
 }
 
 .msg__answer {
