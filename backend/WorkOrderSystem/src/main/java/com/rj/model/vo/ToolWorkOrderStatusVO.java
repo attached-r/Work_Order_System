@@ -4,19 +4,23 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 /**
- * Agent 变更工单状态响应(演示)
+ * Agent 工单动作执行结果(M4 写接口响应)。
  * <p>
- * 演示实现不改库,因此额外用 {@code changed=false} 与 {@code message} 显式告诉调用方
- * 「约定已收到、动作已解析,但未真正落库」,避免 Agent 把它当成已生效的写操作。
- *
- * @see com.rj.service.impl.ToolWorkOrderService#changeStatus
+ * 成功即为已落库:{@code changed} 恒为 {@code true},不再有「解析了但没写」的成功态。
+ * 不回读完整详情——目标状态是确定的;模型若需要最新详情,应再调一次工单详情工具。
  */
 @Data
-@Schema(description = "Agent 变更工单状态响应(演示)")
+@Schema(description = "Agent 工单动作执行结果")
 public class ToolWorkOrderStatusVO {
 
     @Schema(description = "工单ID")
     private Long id;
+
+    @Schema(description = "工单编号")
+    private String orderNo;
+
+    @Schema(description = "执行的动作:REVIEW/DISPATCH/TRANSFER/PROCESS/ACCEPT/WITHDRAW")
+    private String action;
 
     @Schema(description = "变更前状态码")
     private Integer fromStatus;
@@ -24,19 +28,13 @@ public class ToolWorkOrderStatusVO {
     @Schema(description = "变更前状态名")
     private String fromStatusDesc;
 
-    @Schema(description = "请求的目标状态码")
+    @Schema(description = "变更后状态码")
     private Integer targetStatus;
 
-    @Schema(description = "目标状态名")
+    @Schema(description = "变更后状态名")
     private String targetStatusDesc;
 
-    @Schema(description = "解析出的动作:review/dispatch/transfer/process/accept/withdraw/unknown")
-    private String action;
-
-    @Schema(description = "该流转在状态机上是否结构合法(只读判断,不代表已执行)")
-    private boolean transitionLegal;
-
-    @Schema(description = "本次是否真的改动了工单:演示实现恒为 false")
+    @Schema(description = "本次是否真的改动了工单:成功恒为 true")
     private boolean changed;
 
     @Schema(description = "人读说明")

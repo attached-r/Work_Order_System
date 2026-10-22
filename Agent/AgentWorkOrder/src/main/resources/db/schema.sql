@@ -12,7 +12,7 @@ CREATE TABLE `agent_tool_call_log` (
   `session_id`     VARCHAR(64)   NOT NULL                COMMENT '会话id',
   `user_id`        BIGINT        NULL                    COMMENT '用户id(取自 /tool/user/info)',
   `username`       VARCHAR(64)   NULL                    COMMENT '用户名',
-  `tool_name`      VARCHAR(64)   NOT NULL                COMMENT '工具名:listWorkOrders / queryWorkOrder / searchKnowledge',
+  `tool_name`      VARCHAR(64)   NOT NULL                COMMENT '工具名:listWorkOrders/queryWorkOrder/searchKnowledge/reviewWorkOrder/dispatchWorkOrder/transferWorkOrder/processWorkOrder/acceptWorkOrder/withdrawWorkOrder/listAssignableHandlers',
   `tool_args`      VARCHAR(1000) NULL                    COMMENT '工具入参JSON',
   `call_status`    VARCHAR(16)   NOT NULL                COMMENT '调用结果:SUCCESS / ERROR',
   `result_code`    INT           NULL                    COMMENT '项目一错误体的code(失败时);成功为NULL',

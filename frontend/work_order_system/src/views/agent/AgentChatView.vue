@@ -11,16 +11,23 @@
  * 页面内部只有消息区滚动,页头和输入区固定。
  */
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import type { Component } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
+  Back,
   Bottom,
+  CircleCheck,
   DocumentAdd,
+  Finished,
   MagicStick,
   Menu,
   Plus,
+  Promotion,
   Search,
   Share,
+  Stamp,
+  SwitchButton,
   Tickets,
   Timer,
   Warning,
@@ -28,11 +35,18 @@ import {
 import ConversationRail from '@/components/agent/ConversationRail.vue'
 import ChatMessageItem from '@/components/agent/ChatMessageItem.vue'
 import ChatComposer from '@/components/agent/ChatComposer.vue'
+import {
+  WRITE_CONFIRM_KEYWORD,
+  getWritableActions,
+} from '@/constants/agent'
+import type { AgentWriteAction, AgentWriteActionKey } from '@/constants/agent'
 import { useAgentStore } from '@/stores/agent'
 import type { Conversation } from '@/stores/agent'
 import { useUserStore } from '@/stores/user'
 import { copyText } from '@/utils/clipboard'
 import { exportConversationAsMarkdown } from '@/utils/exportChat'
+import { extractWritePreview } from '@/utils/writePreview'
+import type { WritePreviewInfo } from '@/utils/writePreview'
 import { resolveWorkOrderIdByNo } from '@/api'
 import { MAX_MESSAGE_LENGTH } from '@/api/agent'
 import type { WorkOrderRef } from '@/utils/workOrderRef'
@@ -71,12 +85,99 @@ const activeTitle = computed(() => agentStore.activeConversation?.title ?? '新�
 const isLogged = computed(() => userStore.isLogged)
 const canQuery = computed(() => userStore.hasPerm('workorder:query'))
 
+// ---------------------------------------------------------------------------
+// M4：写操作能力（只用于界面显隐，真正的判权在 agent 与项目一）
+// ---------------------------------------------------------------------------
+
+/** 当前账号被授权、且 agent 已开放的写动作（按固定顺序） */
+const writableActions = computed<AgentWriteAction[]>(() =>
+  getWritableActions(userStore.perms),
+)
+
+const canWrite = computed(() => writableActions.value.length > 0)
+
+/**
+ * 头部权限标识。
+ *
+ * M4 的写工具并不要求 workorder:query：只有派单权/审核权的账号，
+ * 仍然可以在对话里执行动作，只是看不到工单详情。原来的「仅通用问答」
+ * 在这种账号上是错误的，必须区分开。
+ */
+const permissionChip = computed<{ text: string; title: string } | null>(() => {
+  if (!isLogged.value) return null
+
+  if (!canQuery.value && canWrite.value) {
+    return {
+      text: '仅工单操作',
+      title: '当前账号没有 workorder:query，但可以执行已授权的工单写操作',
+    }
+  }
+
+  if (!canQuery.value) {
+    return {
+      text: '仅通用问答',
+      title: '当前账号缺少 workorder:query，助手无法查询工单数据',
+    }
+  }
+
+  return null
+})
+
+/** 空态文案：有写权限时明确说明「先预览、再确认」 */
+const emptyDescription = computed(() =>
+  canWrite.value
+    ? '我可以查询工单、解释流程规范，也能在二次确认后执行审核、派单、转派、处理、验收与撤回。'
+    : '我可以查询工单、解释流程规范,也能从知识库中找出操作依据。',
+)
+
+/** 空态警告：未登录 / 无查询权限 / 无查询但有写权限，三种情况文案不同 */
+const emptyWarn = computed(() => {
+  if (!isLogged.value) return '未登录,对话可以继续,但无法查询工单数据。'
+  if (!canQuery.value && canWrite.value) {
+    return '当前账号没有工单查询权限(workorder:query)，但可以在对话中执行已授权的工单动作。'
+  }
+  if (!canQuery.value) {
+    return '当前账号缺少工单查询权限(workorder:query),只能回答通用流程问题。'
+  }
+  return ''
+})
+
+/** 写动作卡片图标：与详情页的动作语义一一对应 */
+const WRITE_ICONS: Record<AgentWriteActionKey, Component> = {
+  review: CircleCheck,
+  dispatch: Promotion,
+  transfer: SwitchButton,
+  process: Finished,
+  accept: Stamp,
+  withdraw: Back,
+}
+
 /** 最后一条用户消息的下标:只有它能编辑后重发 */
 const lastUserIndex = computed(() => {
   for (let i = messages.value.length - 1; i >= 0; i -= 1) {
     if (messages.value[i]?.role === 'user') return i
   }
   return -1
+})
+
+/**
+ * 最后一条助手回答是否是一个「等待确认的写操作预览」。
+ *
+ * 只在满足全部条件时返回：
+ *   - 用户拥有至少一个写权限（否则 agent 那边也不会签发令牌）；
+ *   - 当前没有流式输出（避免半截文本误判）；
+ *   - 最后一条消息是正常结束的 assistant。
+ *
+ * 识别逻辑见 utils/writePreview.ts：mock 模式解析 PREVIEW JSON，
+ * 真实模型模式退化为「是否询问确认执行」的话术识别。
+ */
+const writePreview = computed<WritePreviewInfo | null>(() => {
+  if (!canWrite.value || streaming.value) return null
+
+  const last = messages.value[messages.value.length - 1]
+  if (!last || last.role !== 'assistant' || last.status !== 'done') return null
+
+  return extractWritePreview(last.content)
 })
 
 /**
@@ -95,8 +196,16 @@ const followUps = computed<string[]>(() => {
   return list
 })
 
-/** 空态建议:全部围绕工单域,点一下直接发问 */
-const suggestions = [
+/** 空态建议:只读类问题,点一下直接发问 */
+interface ReadSuggestion {
+  title: string
+  prompt: string
+  icon: Component
+  /** 需要 workorder:query 才能得到有效回答 */
+  requiresQuery?: boolean
+}
+
+const READ_SUGGESTIONS: ReadSuggestion[] = [
   {
     title: '工单状态流转',
     prompt: '工单从提交到完成要经过哪些状态?',
@@ -111,6 +220,7 @@ const suggestions = [
     title: '查询待处理工单',
     prompt: '帮我查询当前待处理的工单有哪些。',
     icon: Search,
+    requiresQuery: true,
   },
   {
     title: '超时与 SLA 规则',
@@ -128,6 +238,25 @@ const suggestions = [
     icon: Share,
   },
 ]
+
+/** 无查询权限时不展示「帮我查询…」，免得点进去只能得到 fail-closed 提示 */
+const suggestions = computed(() =>
+  READ_SUGGESTIONS.filter((item) => !item.requiresQuery || canQuery.value),
+)
+
+/** 输入框提示：有写权限时示例直接给出写操作句式 */
+const composerPlaceholder = computed(() =>
+  canWrite.value
+    ? '告诉我工单 ID 和要执行的动作,例如:审核通过工单 123'
+    : '向工单 Agent 提问,例如:审核驳回后怎么重新提交?',
+)
+
+/** 输入框下方提示：强调「先预览、再确认」 */
+const composerNote = computed(() =>
+  canWrite.value
+    ? '写操作会先给出预览，点击「确认执行」后才会提交；回答由 AI 生成，请核对。'
+    : '回答由 AI 生成,请结合工单实际情况核对。',
+)
 
 // ---------------------------------------------------------------------------
 // 滚动
@@ -260,6 +389,32 @@ function handleSend(text: string): void {
 
 function sendSuggestion(prompt: string): void {
   handleSend(prompt)
+}
+
+/**
+ * M4：确认执行当前预览。
+ *
+ * 只发送约定关键词，不携带令牌、也不直接调写接口 —— 令牌在 agent 进程内，
+ * 由它根据 sessionId 找到预览并完成提交。真实模型路径同样适用：
+ * 模型会把这句话理解为「用户同意」，然后带令牌再次调用写工具。
+ */
+function handleConfirmWrite(): void {
+  if (streaming.value) return
+  handleSend(WRITE_CONFIRM_KEYWORD)
+}
+
+/**
+ * 写操作卡片只预填、不发送。
+ *
+ * 写操作必须由用户明确指定目标工单；预填内容刻意不带示例 ID，
+ * 避免用户直接回车把动作落到一张错误的单上。
+ */
+function prefillWrite(action: AgentWriteAction): void {
+  if (streaming.value || !isLogged.value) return
+
+  draft.value = action.prompt.slice(0, MAX_MESSAGE_LENGTH)
+  ElMessage.info('已填入输入框，请补充工单 ID 等信息后发送')
+  void nextTick(() => composerRef.value?.focus())
 }
 
 async function handleCopy(text: string): Promise<void> {
@@ -418,37 +573,40 @@ onUnmounted(() => {
 
     <section class="chat__main">
       <header class="chat__head">
-        <button
-          type="button"
-          class="chat__icon-btn chat__rail-toggle"
-          title="对话记录"
-          @click="railOpen = true"
-        >
-          <el-icon :size="17"><Menu /></el-icon>
-        </button>
-
-        <div class="chat__title">
-          <span class="wo-eyebrow">Agent</span>
-          <b>{{ activeTitle }}</b>
-        </div>
-
-        <div class="chat__head-right">
-          <span
-            v-if="isLogged && !canQuery"
-            class="chat__perm-chip"
-            title="当前账号缺少 workorder:query,助手无法查询工单数据"
-          >
-            仅通用问答
-          </span>
-
+        <!-- 页头内容与消息列同宽，避免标题贴在左侧、对话却在中间 -->
+        <div class="chat__head-inner">
           <button
             type="button"
-            class="chat__icon-btn chat__new-icon"
-            title="新建对话"
-            @click="handleNewChat"
+            class="chat__icon-btn chat__rail-toggle"
+            title="对话记录"
+            @click="railOpen = true"
           >
-            <el-icon :size="17"><Plus /></el-icon>
+            <el-icon :size="17"><Menu /></el-icon>
           </button>
+
+          <div class="chat__title">
+            <span class="wo-eyebrow">Agent</span>
+            <b>{{ activeTitle }}</b>
+          </div>
+
+          <div class="chat__head-right">
+            <span
+              v-if="permissionChip"
+              class="chat__perm-chip"
+              :title="permissionChip.title"
+            >
+              {{ permissionChip.text }}
+            </span>
+
+            <button
+              type="button"
+              class="chat__icon-btn chat__new-icon"
+              title="新建对话"
+              @click="handleNewChat"
+            >
+              <el-icon :size="17"><Plus /></el-icon>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -465,11 +623,14 @@ onUnmounted(() => {
                 :is-last-user="index === lastUserIndex"
                 :busy="streaming"
                 :enable-work-order-links="canQuery"
+                :write-preview="writePreview"
+                :can-open-preview-order="canQuery"
                 @copy="handleCopy"
                 @regenerate="handleRegenerate"
                 @retry="handleRetry"
                 @edit="handleEdit"
                 @open-workorder="handleOpenWorkOrder"
+                @confirm-write="handleConfirmWrite"
               />
 
               <!-- 建议追问:只在最后一条回答正常结束后出现 -->
@@ -496,16 +657,9 @@ onUnmounted(() => {
 
               <p class="wo-eyebrow">Work Order Agent</p>
               <h2>有什么可以帮你?</h2>
-              <p class="chat-empty__desc">
-                我可以查询工单、解释流程规范,也能从知识库中找出操作依据。
-              </p>
+              <p class="chat-empty__desc">{{ emptyDescription }}</p>
 
-              <p v-if="!isLogged" class="chat-empty__warn">
-                未登录,对话可以继续,但无法查询工单数据。
-              </p>
-              <p v-else-if="!canQuery" class="chat-empty__warn">
-                当前账号缺少工单查询权限(workorder:query),只能回答通用流程问题。
-              </p>
+              <p v-if="emptyWarn" class="chat-empty__warn">{{ emptyWarn }}</p>
 
               <div class="chat-empty__grid">
                 <button
@@ -523,6 +677,43 @@ onUnmounted(() => {
                   <span class="chat-empty__prompt">{{ item.prompt }}</span>
                 </button>
               </div>
+
+              <!--
+                M4：按权限展示可执行的写动作。
+                点击只预填输入框 —— 写操作必须由用户补全工单 ID 后主动发送。
+              -->
+              <template v-if="writableActions.length">
+                <div class="chat-empty__section">
+                  <span class="chat-empty__section-title">工单操作</span>
+                  <span class="chat-empty__section-badge">需二次确认</span>
+                </div>
+
+                <div class="chat-empty__write-grid">
+                  <button
+                    v-for="action in writableActions"
+                    :key="action.key"
+                    type="button"
+                    class="chat-empty__write-card"
+                    :disabled="streaming || !isLogged"
+                    @click="prefillWrite(action)"
+                  >
+                    <span class="chat-empty__write-icon">
+                      <el-icon :size="15"><component :is="WRITE_ICONS[action.key]" /></el-icon>
+                    </span>
+
+                    <span class="chat-empty__write-body">
+                      <span class="chat-empty__write-label">{{ action.label }}</span>
+                      <span class="chat-empty__write-hint">{{ action.hint }}</span>
+                    </span>
+
+                    <span class="chat-empty__write-pre">{{ action.precondition }}</span>
+                  </button>
+                </div>
+
+                <p class="chat-empty__write-note">
+                  点击只会填入输入框；补充工单 ID 后发送，助手会先给出预览，确认后才真正提交。
+                </p>
+              </template>
             </div>
           </div>
         </div>
@@ -547,6 +738,8 @@ onUnmounted(() => {
           v-model="draft"
           :streaming="streaming"
           :disabled="!isLogged"
+          :placeholder="composerPlaceholder"
+          :note="composerNote"
           @send="handleSend"
           @stop="agentStore.stop()"
         />
@@ -557,6 +750,11 @@ onUnmounted(() => {
 
 <style scoped lang="scss">
 .chat {
+  // 对话列的统一宽度：消息区、输入区共用。
+  // 用 max-width + margin auto，而不是固定 width —— 窄屏时跟随可用宽度收缩，
+  // 宽屏时也不会把一行文字拉得过长。
+  --chat-column: 1040px;
+
   position: relative;
   flex: 1;
   min-height: 0;
@@ -603,11 +801,21 @@ onUnmounted(() => {
   flex: none;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 0 18px;
   border-bottom: 1px solid var(--wo-hairline);
   background: rgba(255, 255, 255, 0.82);
   backdrop-filter: blur(10px) saturate(1.2);
+}
+
+// 与 .chat__thread 完全同构：同一个 max-width、同一种左右 padding，
+// 页头标题才会和下方的消息正文对齐。
+.chat__head-inner {
+  width: 100%;
+  max-width: var(--chat-column);
+  margin-inline: auto;
+  padding: 0 clamp(16px, 4vw, 44px);
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .chat__title {
@@ -688,8 +896,11 @@ onUnmounted(() => {
 }
 
 .chat__thread {
-  max-width: 860px;
-  margin: 0 auto;
+  // width:100% + max-width + auto margin：在右侧主列里水平居中，
+  // 窗口变宽时只放大到 --chat-column 就停住，两侧留白始终相等。
+  width: 100%;
+  max-width: var(--chat-column);
+  margin-inline: auto;
   padding: 18px clamp(16px, 4vw, 44px) 20px;
 }
 
@@ -835,6 +1046,125 @@ onUnmounted(() => {
   text-align: left;
 }
 
+// ---------------------------------------------------------------------------
+// M4：工单操作（写）入口
+// ---------------------------------------------------------------------------
+.chat-empty__section {
+  width: 100%;
+  margin-top: 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chat-empty__section-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--wo-ink-2);
+}
+
+.chat-empty__section-badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--wo-st-0-bg);
+  color: var(--wo-st-0-fg);
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.chat-empty__write-grid {
+  width: 100%;
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  text-align: left;
+}
+
+.chat-empty__write-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--wo-hairline);
+  border-radius: var(--wo-radius);
+  background: var(--wo-surface);
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    border-color var(--wo-dur-fast) var(--wo-ease),
+    box-shadow var(--wo-dur-fast) var(--wo-ease),
+    transform var(--wo-dur-fast) var(--wo-ease);
+
+  &:hover:not(:disabled) {
+    border-color: var(--wo-hairline-brand);
+    box-shadow: var(--wo-shadow-sm);
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
+.chat-empty__write-icon {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--wo-brand-wash);
+  color: var(--wo-brand);
+}
+
+.chat-empty__write-body {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.chat-empty__write-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--wo-ink-1);
+}
+
+.chat-empty__write-hint {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--wo-ink-4);
+}
+
+.chat-empty__write-pre {
+  flex: none;
+  align-self: flex-start;
+  max-width: 96px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--wo-surface-sunken);
+  color: var(--wo-ink-4);
+  font-size: 10.5px;
+  line-height: 1.5;
+  text-align: right;
+}
+
+.chat-empty__write-note {
+  width: 100%;
+  margin-top: 9px;
+  text-align: left;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--wo-ink-4);
+}
+
 .chat-empty__card {
   display: flex;
   flex-direction: column;
@@ -898,9 +1228,12 @@ onUnmounted(() => {
   flex: none;
   padding: 8px clamp(16px, 4vw, 44px) 14px;
 
+  // 输入框与消息列共用同一个宽度和同一套左右内边距，
+  // 这样输入框外框的左/右边缘与消息区对齐，不会出现「输入框比回答更宽」的错位感。
   > * {
-    max-width: 860px;
-    margin: 0 auto;
+    width: 100%;
+    max-width: var(--chat-column);
+    margin-inline: auto;
   }
 }
 
@@ -933,11 +1266,12 @@ onUnmounted(() => {
     padding-right: 14px;
   }
 
-  .chat__head {
+  .chat__head-inner {
     padding: 0 12px;
   }
 
-  .chat-empty__grid {
+  .chat-empty__grid,
+  .chat-empty__write-grid {
     grid-template-columns: 1fr;
   }
 

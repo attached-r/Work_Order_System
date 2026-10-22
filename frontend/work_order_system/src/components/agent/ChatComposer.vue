@@ -21,12 +21,15 @@ const props = withDefaults(
     disabled?: boolean
     maxLength?: number
     placeholder?: string
+    /** 输入框下方的提示文案；M4 有写权限时换成「写操作需确认」的说明 */
+    note?: string
   }>(),
   {
     streaming: false,
     disabled: false,
     maxLength: 2000,
     placeholder: '向工单 Agent 提问,例如:审核驳回后怎么重新提交?',
+    note: '回答由 AI 生成,请结合工单实际情况核对。',
   },
 )
 
@@ -145,7 +148,7 @@ defineExpose({ focus })
       </div>
     </div>
 
-    <p class="composer__note">回答由 AI 生成,请结合工单实际情况核对。</p>
+    <p class="composer__note">{{ note }}</p>
   </div>
 </template>
 

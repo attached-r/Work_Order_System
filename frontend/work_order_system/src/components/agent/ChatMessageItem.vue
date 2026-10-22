@@ -8,11 +8,13 @@
 import { computed, nextTick, ref } from 'vue'
 import { CopyDocument, EditPen, MagicStick, RefreshRight } from '@element-plus/icons-vue'
 import AgentMarkdown from './AgentMarkdown.vue'
+import WriteConfirmBar from './WriteConfirmBar.vue'
 import { useUserStore } from '@/stores/user'
 import { formatClock } from '@/utils/datetime'
 import { MAX_MESSAGE_LENGTH } from '@/api/agent'
 import type { ChatMessage } from '@/stores/agent'
 import type { WorkOrderRef } from '@/utils/workOrderRef'
+import type { WritePreviewInfo } from '@/utils/writePreview'
 
 const props = defineProps<{
   message: ChatMessage
@@ -24,6 +26,13 @@ const props = defineProps<{
   busy: boolean
   /** 是否把助手回答里的工单引用渲染成链接 */
   enableWorkOrderLinks: boolean
+  /**
+   * M4:最后一条助手回答被识别为「等待确认的写操作预览」时传入。
+   * 历史消息不传,避免过期预览一直挂着确认按钮。
+   */
+  writePreview?: WritePreviewInfo | null
+  /** 无 workorder:query 时隐藏预览卡片里的「查看工单」 */
+  canOpenPreviewOrder?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -32,6 +41,7 @@ const emit = defineEmits<{
   retry: []
   edit: [messageId: string, text: string]
   'open-workorder': [ref: WorkOrderRef]
+  'confirm-write': []
 }>()
 
 const userStore = useUserStore()
@@ -43,6 +53,16 @@ const time = computed(() => formatClock(new Date(props.message.createdAt).toISOS
 /** 错误/停止状态需要额外的提示条;正常结束不显示 */
 const showError = computed(() => props.message.status === 'error')
 const showStopped = computed(() => props.message.status === 'stopped')
+
+/**
+ * 打开预览卡片里的工单。
+ * 只传内部 ID:预览 JSON 里的 orderNo 可能缺失,而页面跳转只认 ID。
+ */
+function openPreviewOrder(): void {
+  const id = props.writePreview?.data.orderId
+  if (id === undefined || id <= 0) return
+  emit('open-workorder', { id })
+}
 
 // ---------------------------------------------------------------------------
 // 用户消息的内联编辑
@@ -194,6 +214,20 @@ function handleEditKeydown(event: KeyboardEvent): void {
             重新生成
           </button>
         </div>
+
+        <!--
+          M4：写操作预览的确认入口。
+          只在「最后一条、正常结束、当前没有流式输出」时出现；
+          历史消息即使文本里还留着预览，也不再给按钮——令牌可能早已过期。
+        -->
+        <WriteConfirmBar
+          v-if="writePreview && isLastAssistant && !busy && !isStreaming"
+          :info="writePreview"
+          :busy="busy"
+          :can-open-order="canOpenPreviewOrder ?? false"
+          @confirm="emit('confirm-write')"
+          @open-order="openPreviewOrder"
+        />
       </div>
 
       <!-- 操作行:平时低对比,悬浮/聚焦才显形;编辑中隐藏,避免误触 -->

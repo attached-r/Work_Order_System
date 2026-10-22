@@ -2,7 +2,7 @@ package com.rj.controller.tool;
 
 import com.rj.common.PageResult;
 import com.rj.common.annotation.RequiresPermission;
-import com.rj.model.dto.ToolWorkOrderStatusDTO;
+import com.rj.model.dto.ToolWorkOrderActionDTO;
 import com.rj.model.vo.ToolWorkOrderStatusVO;
 import com.rj.model.vo.WorkOrderDetailVO;
 import com.rj.model.vo.WorkOrderVO;
@@ -66,18 +66,21 @@ public class ToolWorkOrderController {
     }
 
     /**
-     * 变更工单状态(处理/驳回/完成等)。<b>当前为可运行 demo,不落库。</b>
+     * 执行工单动作:审核、派单、转派、处理完成、验收、撤回/取消。
+     * <p>
+     * 请求体必须同时给出 {@code action} 与 {@code expectedFromStatus}:前者锁定动作语义,
+     * 后者是调用方确认时看到的状态;与库中最新状态不一致即 409,绝不重新解释动作。
      * <p>
      * <b>刻意不挂 {@code @RequiresPermission}:</b>单个注解的语义是「同时满足所列所有权限码」,
-     * 而此接口按目标动作分别需要 {@code workorder:review}/{@code dispatch}/{@code process}/
-     * {@code accept}/{@code withdraw} 之一,无法用一条注解表达。这与既有
-     * {@code WorkOrderController#dispatch} 同款先例——真实实现应在 Service 内<b>按动作逐个判权</b>
-     * (扩展点见 {@link com.rj.service.impl.ToolWorkOrderService#changeStatus})。
+     * 而此接口按动作分别需要 {@code workorder:review}/{@code dispatch}/{@code transfer}/
+     * {@code process}/{@code accept}/{@code withdraw} 之一,无法用一条注解表达。
+     * 判权在 {@link com.rj.service.impl.ToolWorkOrderService#changeStatus} 内按动作逐个执行,
+     * 且先于查库,避免无权限者探测工单是否存在。
      */
-    @Operation(summary = "变更工单状态(Agent,演示实现)")
+    @Operation(summary = "执行工单动作(Agent)")
     @PutMapping("/{id}/status")
     public ToolWorkOrderStatusVO changeStatus(@PathVariable Long id,
-                                              @Valid @RequestBody ToolWorkOrderStatusDTO dto) {
+                                              @Valid @RequestBody ToolWorkOrderActionDTO dto) {
         return toolWorkOrderService.changeStatus(id, dto);
     }
 }

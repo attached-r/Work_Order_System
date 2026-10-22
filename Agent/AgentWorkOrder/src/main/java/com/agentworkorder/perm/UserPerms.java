@@ -1,5 +1,6 @@
 package com.agentworkorder.perm;
 
+import java.util.Collection;
 import java.util.Set;
 
 /**
@@ -20,5 +21,23 @@ public record UserPerms(Long userId, String username, Set<String> permCodes) {
     /** 该用户是否持有某权限码。 */
     public boolean has(String permCode) {
         return permCode != null && permCodes.contains(permCode);
+    }
+
+    /**
+     * 该用户是否持有集合中的<b>任意一个</b>权限码（OR 语义）。
+     * <p>
+     * 用于「派单或转派都能看候选处理人」这类场景:单一权限码的 AND 语义无法表达,
+     * 而在 agent 侧拆成两个工具又会重复实现同一份只读能力。
+     */
+    public boolean hasAny(Collection<String> requiredPerms) {
+        if (requiredPerms == null || requiredPerms.isEmpty()) {
+            return false;
+        }
+        for (String permCode : requiredPerms) {
+            if (permCodes.contains(permCode)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

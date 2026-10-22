@@ -34,7 +34,7 @@ spring:
         speech: none
         transcription: none
     openai:
-      api-key: ${API_KEY:}
+      api-key: ${API_KEY:sk-2971e7134e7b4a42b737063254d33956}
       # 默认走deepseek的 OpenAI 兼容端点
       base-url: ${BASE_URL:https://api.deepseek.com}
       chat:
@@ -56,6 +56,19 @@ agent:
   perm:
     # 用户 perms 的进程内缓存时长（秒）；改权限后要等它过期才生效，故不宜过长
     cache-ttl-seconds: 60
+
+  # M4：写操作
+  write:
+    # 总开关：false 时不注册写工具、提示词不含写规则（只读模式）
+    enabled: true
+    # 预览令牌有效期（秒）
+    confirm-ttl-seconds: 300
+    # 进程内待确认预览上限（防内存膨胀）
+    max-preview-entries: 2000
+    # 每轮对话最多执行的真实写操作数；0 = 只允许预览
+    max-actions-per-turn: 1
+    # mock 模式下真正提交所需的关键词（避免「确认」误触发）
+    mock-execute-keyword: 确认执行
 
   rag:
     enabled: true
@@ -84,7 +97,7 @@ agent:
       provider: openai
       # 注意：Spring AI 会在 base-url 后自动追加 /v1/embeddings，故这里不能带 /v1
       base-url: ${EMBEDDING_BASE_URL:https://api.siliconflow.cn}
-      api-key: ${EMBEDDING_API_KEY:}
+      api-key: ${EMBEDDING_API_KEY:sk-saurlxrszkjrtkccimwqjjchoptaciyfbfyrqtxhvotbhedw}
       model: ${EMBEDDING_MODEL:BAAI/bge-m3}
       dimensions: 1024
       # bge-m3 维度固定，部分兼容服务不接受 dimensions 参数，默认不发送

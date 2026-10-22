@@ -56,6 +56,7 @@ declare module 'vue' {
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     StatusTag: typeof import('./../components/StatusTag.vue')['default']
+    WriteConfirmBar: typeof import('./../components/agent/WriteConfirmBar.vue')['default']
   }
   export interface GlobalDirectives {
     vLoading: typeof import('element-plus/es')['ElLoadingDirective']

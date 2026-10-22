@@ -1,12 +1,14 @@
 package com.agentworkorder.llm;
 
 import com.agentworkorder.config.LlmProperties;
+import com.agentworkorder.config.SystemPromptComposer;
 import com.agentworkorder.knowledge.KnowledgeTools;
 import com.agentworkorder.perm.PermService;
 import com.agentworkorder.perm.ToolPermissionRegistry;
 import com.agentworkorder.perm.UserPerms;
 import com.agentworkorder.tool.ToolContextKeys;
 import com.agentworkorder.tool.WorkOrderTools;
+import com.agentworkorder.tool.WorkOrderWriteTools;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
@@ -56,7 +58,9 @@ public class SpringAiLlmClient implements LlmClient {
     public SpringAiLlmClient(ChatClient.Builder builder,
                              WorkOrderTools workOrderTools,
                              ObjectProvider<KnowledgeTools> knowledgeToolsProvider,
+                             ObjectProvider<WorkOrderWriteTools> writeToolsProvider,
                              LlmProperties llmProperties,
+                             SystemPromptComposer promptComposer,
                              ChatMemory chatMemory,
                              PermService permService,
                              ToolPermissionRegistry permissionRegistry) {
@@ -64,12 +68,12 @@ public class SpringAiLlmClient implements LlmClient {
         this.permService = permService;
         this.permissionRegistry = permissionRegistry;
 
-        // 步骤 1：RAG 开启时 KnowledgeTools 才存在；关闭时 Provider 返回 null，
-        //         系统提示也切换为不含检索规则的基础版本
+        // 步骤 1：按实际注册的 Bean 拼系统提示词——
+        //         RAG 关闭时 KnowledgeTools 不存在；写开关关闭时 WorkOrderWriteTools 不存在，
+        //         对应段落自然不出现，模型不会尝试调用不存在的工具
         KnowledgeTools knowledgeTools = knowledgeToolsProvider.getIfAvailable();
-        String systemPrompt = knowledgeTools != null
-                ? llmProperties.getSystemPromptWithRag()
-                : llmProperties.getSystemPrompt();
+        WorkOrderWriteTools writeTools = writeToolsProvider.getIfAvailable();
+        String systemPrompt = promptComposer.compose(knowledgeTools != null, writeTools != null);
 
         this.chatClient = builder
                 .defaultSystem(systemPrompt)
@@ -77,12 +81,15 @@ public class SpringAiLlmClient implements LlmClient {
                 .defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory).build())
                 .build();
 
-        // 步骤 2：把全部 @Tool 对象编成 ToolCallback[]（M3 从单对象改为多对象）
-        //         WorkOrderTools = 实时数据；KnowledgeTools = 静态规则
+        // 步骤 2：把全部 @Tool 对象编成 ToolCallback[]（M3 多对象，M4 再加写工具）
+        //         WorkOrderTools = 实时数据；KnowledgeTools = 静态规则；WorkOrderWriteTools = 写操作
         List<Object> toolObjects = new ArrayList<>();
         toolObjects.add(workOrderTools);
         if (knowledgeTools != null) {
             toolObjects.add(knowledgeTools);
+        }
+        if (writeTools != null) {
+            toolObjects.add(writeTools);
         }
         this.allToolCallbacks = MethodToolCallbackProvider.builder()
                 .toolObjects(toolObjects.toArray())

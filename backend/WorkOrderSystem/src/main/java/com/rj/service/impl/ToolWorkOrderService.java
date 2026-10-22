@@ -1,8 +1,19 @@
 package com.rj.service.impl;
 
 import com.rj.common.PageResult;
-import com.rj.model.dto.ToolWorkOrderStatusDTO;
+import com.rj.common.ResultCode;
+import com.rj.common.UserContext;
+import com.rj.exception.BusinessException;
+import com.rj.mapper.WorkOrderMapper;
+import com.rj.model.dto.AcceptDTO;
+import com.rj.model.dto.DispatchDTO;
+import com.rj.model.dto.ProcessDTO;
+import com.rj.model.dto.ReviewDTO;
+import com.rj.model.dto.ToolWorkOrderActionDTO;
+import com.rj.model.dto.WithdrawDTO;
+import com.rj.model.enums.ToolWorkOrderAction;
 import com.rj.model.enums.WorkOrderStatus;
+import com.rj.model.pojo.WorkOrder;
 import com.rj.model.vo.ToolWorkOrderStatusVO;
 import com.rj.model.vo.WorkOrderDetailVO;
 import com.rj.model.vo.WorkOrderVO;
@@ -13,7 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 /**
- * Agent Tool 工单服务实现:复用 {@link IWorkOrderService},只做入参整形与演示写接口。
+ * Agent Tool 工单服务实现:复用 {@link IWorkOrderService},只做入参整形、动作分发与判权。
  */
 @Slf4j
 @Service
@@ -27,6 +38,14 @@ public class ToolWorkOrderService implements IToolWorkOrderService {
     private static final long TOOL_MAX_PAGE_SIZE = 50L;
 
     private final IWorkOrderService workOrderService;
+
+    /**
+     * 写路径专用:直接读主表拿「最新状态」。
+     * <p>
+     * 不能复用 {@code IWorkOrderService.detail()}:它走逻辑过期缓存,过期窗口内可能返回旧状态,
+     * 而旧状态会把「派单」误路由成「转派」。这里只需要 id + status + orderNo,查主表最小也最新。
+     */
+    private final WorkOrderMapper workOrderMapper;
 
     /**
      * 工单列表:把分页参数钳制到安全区间后委托给既有分页查询。
@@ -51,77 +70,149 @@ public class ToolWorkOrderService implements IToolWorkOrderService {
     }
 
     /**
-     * 变更工单状态(<b>演示实现</b>)。
+     * 执行工单动作(真实落库)。
      * <p>
-     * 复用 {@code detail(id)} 取当前状态——顺带白拿它内部的数据范围校验:越权会抛 403、
-     * 工单不存在会抛 404,因此本演示是「真的走了鉴权/范围路径」,而非永远成功的空壳。
-     * 然后仅用状态机做<b>只读</b>的合法性判断并回显解析结果,<b>不改库</b>。
+     * 严格按「先判权、后查库」的顺序:无权限者不该通过 404/409/403 的差异探测工单是否存在。
+     * 本方法<b>不挂</b> {@code @Transactional}:委托的五个方法各自是事务边界,返回时日志、
+     * outbox、缓存失效都已提交,响应语义明确。
      */
     @Override
-    public ToolWorkOrderStatusVO changeStatus(Long id, ToolWorkOrderStatusDTO dto) {
-        WorkOrderDetailVO current = workOrderService.detail(id);
-        int from = current.getStatus();
-        int target = dto.getTargetStatus();
+    public ToolWorkOrderStatusVO changeStatus(Long id, ToolWorkOrderActionDTO dto) {
+        // 第 1 步:解析动作。未知动作直接 400,不触碰数据库
+        ToolWorkOrderAction action = ToolWorkOrderAction.fromCode(dto.getAction());
+        if (action == null) {
+            throw new BusinessException(ResultCode.BAD_REQUEST,
+                    "不支持的动作: " + dto.getAction()
+                            + ",可选值 REVIEW/DISPATCH/TRANSFER/PROCESS/ACCEPT/WITHDRAW");
+        }
 
-        WorkOrderStatus fromStatus = WorkOrderStatus.fromCode(from);
-        WorkOrderStatus targetStatus = WorkOrderStatus.fromCode(target);
-        // 只读合法性:不执行任何迁移,仅复用状态机的迁移表判断「这一步结构上是否允许」
-        boolean legal = fromStatus.canTransitionTo(targetStatus);
-        String action = resolveAction(from, target);
+        // 第 2 步:按动作判权。Tool 入口的 Controller 刻意没有权限注解,
+        // review/process/accept/withdraw 的权限防线只剩这一处
+        requirePermission(action);
 
-        // ============================================================================
-        // TODO(状态机扩展点):真实流转分发落在此处。当前为演示,只解析不落库。
-        // 真实实现应按 (当前状态, targetStatus) 派发到既有方法,并由各自的状态机 + 乐观锁保证:
-        //   0 待审核 + 目标1(approved=true) -> workOrderService.review(id, new ReviewDTO(true,  remark))
-        //   0 待审核 + 目标5(approved=false)-> workOrderService.review(id, new ReviewDTO(false, remark))
-        //   1 待派单 + 目标2                 -> workOrderService.dispatch(id, new DispatchDTO(handlerId, remark))
-        //   2 处理中 + 目标2(转派)          -> workOrderService.dispatch(id, new DispatchDTO(handlerId, remark))
-        //   2 处理中 + 目标3                 -> workOrderService.process(id, new ProcessDTO(remark))
-        //   3 待验收 + 目标4(approved=true) -> workOrderService.accept(id, new AcceptDTO(true,  remark))
-        //   3 待验收 + 目标2(approved=false)-> workOrderService.accept(id, new AcceptDTO(false, remark))
-        //   可取消态 + 目标6                 -> workOrderService.withdraw(id, new WithdrawDTO(remark))
-        // 注意:每个动作需要不同的权限码(review/dispatch/process/accept/withdraw),单一
-        // @RequiresPermission 无法表达「其一」,故真实实现应在 Service 内按动作逐个判权
-        // (与 WorkOrderController#dispatch 同样的先例),而非在 Controller 上挂注解。
-        // ============================================================================
+        // 第 3 步:参数与存在性。绕开详情缓存读主表,拿到最新状态
+        if (id == null || id <= 0) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "工单ID非法");
+        }
+        WorkOrder order = workOrderMapper.selectById(id);
+        if (order == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "工单不存在");
+        }
+        int currentStatus = order.getStatus();
 
+        // 第 4 步:状态漂移校验。调用方确认时看到的状态必须仍是当前状态,
+        // 否则本次「意图」已失效,拒绝执行而不重新解释动作
+        if (!dto.getExpectedFromStatus().equals(currentStatus)) {
+            throw new BusinessException(ResultCode.CONFLICT,
+                    "工单状态已变更(当前:" + WorkOrderStatus.fromCode(currentStatus).getDesc()
+                            + "),请重新查询确认后再操作");
+        }
+
+        // 第 5 步:动作与该起点是否匹配。例如派单只接受待派单,不会被当成转派
+        if (!action.allowsFrom(currentStatus)) {
+            throw new BusinessException(ResultCode.CONFLICT,
+                    "当前状态[" + WorkOrderStatus.fromCode(currentStatus).getDesc()
+                            + "]不允许执行[" + action.getDesc() + "]");
+        }
+
+        // 第 6、7 步:动作参数校验 + 委托既有 Service(数据范围、状态机、乐观锁都在其中)
+        WorkOrderStatus targetStatus = execute(action, id, dto);
+
+        // 第 8 步:组装响应。目标状态是确定的,不回读详情
         ToolWorkOrderStatusVO vo = new ToolWorkOrderStatusVO();
         vo.setId(id);
-        vo.setFromStatus(from);
-        vo.setFromStatusDesc(fromStatus.getDesc());
-        vo.setTargetStatus(target);
+        vo.setOrderNo(order.getOrderNo());
+        vo.setAction(action.name());
+        vo.setFromStatus(currentStatus);
+        vo.setFromStatusDesc(WorkOrderStatus.fromCode(currentStatus).getDesc());
+        vo.setTargetStatus(targetStatus.getCode());
         vo.setTargetStatusDesc(targetStatus.getDesc());
-        vo.setAction(action);
-        vo.setTransitionLegal(legal);
-        vo.setChanged(false);
-        vo.setMessage("演示接口:已解析目标流转[" + action + "]"
-                + (legal ? ",状态机判定合法" : ",状态机判定非法")
-                + ";未执行真实写操作");
-        log.info("Tool 状态变更(演示): orderId={}, from={}, target={}, action={}, legal={}",
-                id, from, target, action, legal);
+        vo.setChanged(true);
+        vo.setMessage(resolveMessage(action, dto));
+        log.info("Tool 工单动作: orderId={}, action={}, {} -> {}, operator={}",
+                id, action, currentStatus, targetStatus.getCode(), UserContext.getUserId());
         return vo;
     }
 
+    /** 按动作判权:权限码原样取自项目一权限表,不做角色推导 */
+    private static void requirePermission(ToolWorkOrderAction action) {
+        if (!UserContext.hasPermission(action.getPermCode())) {
+            throw new BusinessException(ResultCode.FORBIDDEN, "缺少操作权限: " + action.getPermCode());
+        }
+    }
+
     /**
-     * 目标状态 → 动作名(仅用于演示响应的可读描述)。
+     * 把动作分派到既有写方法,并返回预期的目标状态。
      * <p>
-     * 既要看目标,也要看起点:目标态 2「处理中」可由三种来路进入——派单(1→2)、
-     * 转派(2→2 自环)、验收退回(3→2),单看 target 无法区分。
+     * 参数在委托前校验:宁可返回明确的 400,也不能让 {@code Boolean.TRUE.equals(null)}
+     * 把「没传 approved」静默解释成「驳回」。
      */
-    private String resolveAction(int from, int target) {
-        return switch (target) {
-            case 1 -> "review";     // 0 待审核 → 1 待派单:审核通过
-            case 5 -> "review";     // 0 待审核 → 5 已驳回:审核驳回
-            case 3 -> "process";    // 2 处理中 → 3 待验收:处理完成
-            case 4 -> "accept";     // 3 待验收 → 4 已完成:验收通过
-            case 6 -> "withdraw";   // 可取消态 → 6 已取消:撤回/取消
-            case 2 -> switch (from) {
-                case 1 -> "dispatch";   // 1 待派单 → 2:派单
-                case 2 -> "transfer";   // 2 → 2:转派(自环换处理人)
-                case 3 -> "accept";     // 3 待验收 → 2:验收退回
-                default -> "unknown";
-            };
-            default -> "unknown";
+    private WorkOrderStatus execute(ToolWorkOrderAction action, Long id, ToolWorkOrderActionDTO dto) {
+        return switch (action) {
+            case REVIEW -> {
+                boolean approved = requireApproved(action, dto);
+                ReviewDTO reviewDTO = new ReviewDTO();
+                reviewDTO.setApproved(approved);
+                reviewDTO.setRemark(dto.getRemark());
+                workOrderService.review(id, reviewDTO);
+                yield approved ? WorkOrderStatus.PENDING_DISPATCH : WorkOrderStatus.REJECTED;
+            }
+            case DISPATCH, TRANSFER -> {
+                // 派单与转派入参一致,交给 dispatch 按当前状态做精确判权与范围校验
+                if (dto.getHandlerId() == null) {
+                    throw new BusinessException(ResultCode.BAD_REQUEST, action.getDesc() + "必须指定处理人 handlerId");
+                }
+                DispatchDTO dispatchDTO = new DispatchDTO();
+                dispatchDTO.setHandlerId(dto.getHandlerId());
+                dispatchDTO.setRemark(dto.getRemark());
+                workOrderService.dispatch(id, dispatchDTO);
+                yield WorkOrderStatus.PROCESSING;
+            }
+            case PROCESS -> {
+                ProcessDTO processDTO = new ProcessDTO();
+                processDTO.setRemark(dto.getRemark());
+                workOrderService.process(id, processDTO);
+                yield WorkOrderStatus.PENDING_ACCEPT;
+            }
+            case ACCEPT -> {
+                boolean approved = requireApproved(action, dto);
+                AcceptDTO acceptDTO = new AcceptDTO();
+                acceptDTO.setApproved(approved);
+                acceptDTO.setRemark(dto.getRemark());
+                workOrderService.accept(id, acceptDTO);
+                yield approved ? WorkOrderStatus.COMPLETED : WorkOrderStatus.PROCESSING;
+            }
+            case WITHDRAW -> {
+                WithdrawDTO withdrawDTO = new WithdrawDTO();
+                withdrawDTO.setRemark(dto.getRemark());
+                workOrderService.withdraw(id, withdrawDTO);
+                yield WorkOrderStatus.CANCELED;
+            }
+        };
+    }
+
+    /** 审核/验收必须显式给出结论,缺失时 400 而不是默认按驳回处理 */
+    private static boolean requireApproved(ToolWorkOrderAction action, ToolWorkOrderActionDTO dto) {
+        if (dto.getApproved() == null) {
+            throw new BusinessException(ResultCode.BAD_REQUEST,
+                    action.getDesc() + "必须提供结论 approved(true 通过 / false 驳回或退回)");
+        }
+        return dto.getApproved();
+    }
+
+    /** 面向模型的人读结果说明 */
+    private static String resolveMessage(ToolWorkOrderAction action, ToolWorkOrderActionDTO dto) {
+        return switch (action) {
+            case REVIEW -> Boolean.TRUE.equals(dto.getApproved())
+                    ? "审核通过,工单已流转至待派单"
+                    : "审核驳回,工单已流转至已驳回";
+            case DISPATCH -> "派单成功,工单已流转至处理中";
+            case TRANSFER -> "转派成功,处理人已更换";
+            case PROCESS -> "处理完成,工单已流转至待验收";
+            case ACCEPT -> Boolean.TRUE.equals(dto.getApproved())
+                    ? "验收通过,工单已完成"
+                    : "验收退回,工单已退回处理中";
+            case WITHDRAW -> "工单已撤回/取消";
         };
     }
 }

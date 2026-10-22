@@ -4,6 +4,8 @@ import com.agentworkorder.config.WorkOrderProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
@@ -31,7 +33,15 @@ public class WorkOrderToolClient {
 
     public WorkOrderToolClient(WorkOrderProperties properties) {
         this.baseUrl = properties.getBaseUrl();
-        this.restClient = RestClient.builder().baseUrl(this.baseUrl).build();
+        // 显式超时:读接口之外 M4 还有写接口,不能让一次网络故障把整轮对话挂死。
+        // 写操作本地库事务,10 秒足够;超时后由上层转成「结果未知」,绝不自动重试。
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(2000);
+        requestFactory.setReadTimeout(10000);
+        this.restClient = RestClient.builder()
+                .baseUrl(this.baseUrl)
+                .requestFactory(requestFactory)
+                .build();
     }
 
     /**
@@ -84,6 +94,45 @@ public class WorkOrderToolClient {
         log.info("[tool] GET {}/tool/user/info", baseUrl);
 
         RestClient.RequestHeadersSpec<?> spec = restClient.get().uri("/tool/user/info");
+
+        String body = withAuth(spec, authToken).retrieve().body(String.class);
+        log.info("[tool] 项目一返回：{} 字节", body == null ? 0 : body.length());
+        return body;
+    }
+
+    /**
+     * 执行一次工单动作（写接口）。
+     *
+     * <p>返回原始 JSON:成功是动作结果,失败是 {@code {code,message}}。与读接口一致,
+     * 由上层判断是否需要转述给模型;网络异常直接抛出,由工具层转成「结果未知」。
+     */
+    public String changeStatus(Long id, ToolChangeStatusRequest request, String authToken) {
+        log.info("[tool] PUT {}/tool/workorder/{}/status action={} expectedFrom={}",
+                baseUrl, id, request.action(), request.expectedFromStatus());
+
+        RestClient.RequestHeadersSpec<?> spec = restClient.put()
+                .uri("/tool/workorder/{id}/status", id)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(request);
+
+        String body = withAuth(spec, authToken).retrieve().body(String.class);
+        log.info("[tool] 项目一返回：{} 字节", body == null ? 0 : body.length());
+        return body;
+    }
+
+    /**
+     * 查询可指派处理人（{@code GET /tool/user/handlers}）。
+     *
+     * @param keyword 姓名/账号关键字,可空;由项目一按本部门 + HANDLER + 启用状态过滤
+     * @return 裸 JSON 数组;失败为 {@code {code,message}} 错误体
+     */
+    public String listHandlers(String keyword, String authToken) {
+        log.info("[tool] GET {}/tool/user/handlers keyword={}", baseUrl, keyword);
+
+        RestClient.RequestHeadersSpec<?> spec = restClient.get()
+                .uri(builder -> builder.path("/tool/user/handlers")
+                        .queryParamIfPresent("keyword", present(keyword))
+                        .build());
 
         String body = withAuth(spec, authToken).retrieve().body(String.class);
         log.info("[tool] 项目一返回：{} 字节", body == null ? 0 : body.length());

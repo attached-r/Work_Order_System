@@ -12,7 +12,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 // 裸图标名不会被 resolver 自动解析,必须显式导入
-import { ArrowLeft, InfoFilled, MagicStick, Right } from '@element-plus/icons-vue'
+import { ArrowDown, ArrowLeft, InfoFilled, MagicStick, Right } from '@element-plus/icons-vue'
 import StatusTag from '@/components/StatusTag.vue'
 import PriorityTag from '@/components/PriorityTag.vue'
 import {
@@ -70,6 +70,88 @@ const actions = computed<WorkOrderAction[]>(() => {
 
 const hasActions = computed(() => actions.value.length > 0)
 const terminal = computed(() => isTerminal(detail.value?.status))
+
+// ---------------------------------------------------------------------------
+// M4：让智能助手执行动作
+// ---------------------------------------------------------------------------
+
+interface AssistantAction {
+  label: string
+  /** 需要用户补充的信息（处理人 / 驳回原因等） */
+  hint: string
+  /** 跳转助手后预填的内容，包含真实工单编号与内部 ID */
+  prompt: string
+}
+
+/**
+ * 详情页可交给助手的动作。
+ *
+ * 直接复用状态机 + 权限推导出的 actions（排除 resubmit），
+ * 保证入口与右侧操作栏的按钮完全一致；是否真的能执行仍由项目一裁决。
+ *
+ * 审核/验收在这里拆成「通过 / 驳回（退回）」两项：预填文案本身就是明确的动作，
+ * 用户不必在长句里手工修改结论。
+ *
+ * 预填内容同时写入展示编号（WO…）和内部 ID：
+ *   - agent/mock 解析的是内部 ID，编号只是给用户看的上下文；
+ *   - 编号是 14 位连续数字，不会被 mock 的 1–12 位工单 ID 正则误当成 ID。
+ */
+const assistantActions = computed<AssistantAction[]>(() => {
+  const current = detail.value
+  if (!current) return []
+
+  const ref = `工单 ${current.orderNo}（内部 ID ${current.id}）`
+  const list: AssistantAction[] = []
+
+  for (const action of actions.value) {
+    switch (action.key) {
+      case 'review':
+        list.push({ label: '审核通过', hint: '', prompt: `请帮我审核通过${ref}。` })
+        list.push({
+          label: '审核驳回',
+          hint: '可补充原因',
+          prompt: `请帮我审核驳回${ref}，原因：`,
+        })
+        break
+
+      case 'accept':
+        list.push({ label: '验收通过', hint: '', prompt: `请帮我验收通过${ref}。` })
+        list.push({
+          label: '验收退回',
+          hint: '可补充原因',
+          prompt: `请帮我验收退回${ref}，原因：`,
+        })
+        break
+
+      case 'dispatch':
+        // 必须保留「派单」一词（mock 靠它识别动作）；「派给」后面留给用户补处理人姓名
+        list.push({
+          label: '派单',
+          hint: '需补充处理人',
+          prompt: `请帮我派单：把${ref}派给 `,
+        })
+        break
+
+      case 'transfer':
+        list.push({ label: '转派', hint: '需补充处理人', prompt: `请把${ref}转派给 ` })
+        break
+
+      case 'process':
+        list.push({ label: '处理完成', hint: '', prompt: `请提交${ref}的处理完成。` })
+        break
+
+      case 'withdraw':
+        list.push({ label: action.label, hint: '', prompt: `请帮我撤回${ref}。` })
+        break
+
+      default:
+        // resubmit 需要改写完整内容，M4 不开放给 agent
+        break
+    }
+  }
+
+  return list
+})
 
 const remaining = computed(() => formatRemaining(detail.value?.expireTime ?? null))
 
@@ -235,6 +317,19 @@ function askAgent(): void {
   void router.push({ name: 'agent-chat', query: { ask: prompt } })
 }
 
+/**
+ * 让助手执行某个写动作。
+ *
+ * 下拉项直接把预填文案作为 command 传过来，只跳转、不自动发送：
+ * 用户还需要补处理人姓名或原因，并在助手页核对预览后才能确认。
+ * 真正的写操作仍然要走「预览 → 用户确认」两阶段。
+ */
+function askAgentWrite(prompt: string): void {
+  if (!prompt) return
+  // 刻意不做 trimEnd：派单/转派的预填以「派给 」结尾，保留空格方便用户直接输入姓名
+  void router.push({ name: 'agent-chat', query: { ask: prompt } })
+}
+
 onMounted(() => {
   void load()
   // 目录只用于补名字,失败了也不影响工单本身,所以不 await、不阻塞
@@ -252,11 +347,42 @@ onMounted(() => {
         返回列表
       </el-button>
 
-      <!-- 带着工单编号与内部 ID 跳转到助手,预填但不自动发送 -->
-      <el-button v-if="detail" plain class="ask-agent" @click="askAgent">
-        <el-icon><MagicStick /></el-icon>
-        问助手
-      </el-button>
+      <div v-if="detail" class="detail__top-actions">
+        <!-- 带着工单编号与内部 ID 跳转到助手,预填但不自动发送 -->
+        <el-button plain class="ask-agent" @click="askAgent">
+          <el-icon><MagicStick /></el-icon>
+          问助手
+        </el-button>
+
+        <!--
+          M4：按当前状态 + 权限给出「让助手执行」入口。
+          只预填草稿，不自动发送；用户可在助手页核对后再确认执行。
+        -->
+        <el-dropdown
+          v-if="assistantActions.length"
+          trigger="click"
+          @command="askAgentWrite"
+        >
+          <el-button plain class="ask-agent ask-agent--write">
+            <el-icon><MagicStick /></el-icon>
+            让助手处理
+            <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+          </el-button>
+
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item
+                v-for="item in assistantActions"
+                :key="item.label"
+                :command="item.prompt"
+              >
+                <span>{{ item.label }}</span>
+                <span v-if="item.hint" class="assistant-opt-hint">{{ item.hint }}</span>
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+      </div>
     </div>
 
     <template v-if="detail">
@@ -509,6 +635,12 @@ onMounted(() => {
   margin-bottom: var(--wo-space-3);
 }
 
+.detail__top-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .ask-agent {
   flex: none;
   color: var(--wo-brand);
@@ -519,6 +651,22 @@ onMounted(() => {
     border-color: var(--wo-brand);
     background: var(--wo-brand-wash);
   }
+}
+
+// 「让助手处理」与只读的「问助手」区分开：写动作给主色描边，但仍是次要按钮
+.ask-agent--write {
+  background: var(--wo-brand-wash);
+
+  &:hover {
+    background: var(--wo-brand-wash-2);
+  }
+}
+
+// 下拉项里的补充信息（例如「需补充处理人」）
+.assistant-opt-hint {
+  margin-left: 8px;
+  font-size: 11px;
+  color: var(--wo-ink-4);
 }
 
 .back {
