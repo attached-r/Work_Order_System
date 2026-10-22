@@ -34,7 +34,7 @@ spring:
         speech: none
         transcription: none
     openai:
-      api-key: ${API_KEY:sk-2971e7134e7b4a42b737063254d33956}
+      api-key: ${API_KEY:}
       # 默认走deepseek的 OpenAI 兼容端点
       base-url: ${BASE_URL:https://api.deepseek.com}
       chat:
@@ -97,7 +97,7 @@ agent:
       provider: openai
       # 注意：Spring AI 会在 base-url 后自动追加 /v1/embeddings，故这里不能带 /v1
       base-url: ${EMBEDDING_BASE_URL:https://api.siliconflow.cn}
-      api-key: ${EMBEDDING_API_KEY:sk-saurlxrszkjrtkccimwqjjchoptaciyfbfyrqtxhvotbhedw}
+      api-key: ${EMBEDDING_API_KEY:}
       model: ${EMBEDDING_MODEL:BAAI/bge-m3}
       dimensions: 1024
       # bge-m3 维度固定，部分兼容服务不接受 dimensions 参数，默认不发送
