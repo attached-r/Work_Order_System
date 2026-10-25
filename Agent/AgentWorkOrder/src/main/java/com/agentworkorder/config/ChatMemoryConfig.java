@@ -1,30 +1,50 @@
 package com.agentworkorder.config;
 
+import com.agentworkorder.memory.RedisChatMemoryRepository;
+import com.agentworkorder.redis.JsonCodec;
 import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.ai.chat.memory.ChatMemoryRepository;
 import org.springframework.ai.chat.memory.InMemoryChatMemoryRepository;
 import org.springframework.ai.chat.memory.MessageWindowChatMemory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.core.StringRedisTemplate;
+
+import java.time.Duration;
 
 /**
- * 会话记忆配置（M1 从简，只用内存版）。
+ * 会话记忆装配（M5 改造）。
  *
- * <p>刻意把 {@link ChatMemory} 暴露成 Bean：M1 用内存版 {@link MessageWindowChatMemory}「跑通」多轮对话即可；
- * 将来（M5）换成 Redis 版时，接口一致，只需换这里的实现，业务代码（{@code SpringAiLlmClient}）不动。
- *
- * <p>注意内存版的固有局限：<b>重启即丢、多实例不共享</b>——M1 可接受。
+ * <p>只替换 Repository，不动 MessageWindowChatMemory；这样「20 条窗口」的语义与 M1–M4 完全一致。
+ * <p>agent.memory.store=memory 可一键回滚到 M4 行为（无 Redis 也能开发）。
  */
 @Configuration
 public class ChatMemoryConfig {
-
-    /** 每个会话保留的最大消息条数（约等于 N 轮问答），防止上下文无限膨胀。 */
-    private static final int MAX_MESSAGES = 20;
+    // SpringBoot 启动扫描时 自动注入
+    @Bean
+    @ConditionalOnProperty(name = "agent.memory.store", havingValue = "redis")
+    public ChatMemoryRepository redisChatMemoryRepository(StringRedisTemplate redis,
+                                                          JsonCodec codec,
+                                                          MemoryProperties properties) {
+        return new RedisChatMemoryRepository(
+                redis,
+                codec,
+                properties.getKeyPrefix(),
+                Duration.ofDays(Math.max(1, properties.getTtlDays())));
+    }
 
     @Bean
-    public ChatMemory chatMemory() {
+    @ConditionalOnProperty(name = "agent.memory.store", havingValue = "memory", matchIfMissing = true)
+    public ChatMemoryRepository inMemoryChatMemoryRepository() {
+        return new InMemoryChatMemoryRepository();
+    }
+
+    @Bean
+    public ChatMemory chatMemory(ChatMemoryRepository repository, MemoryProperties properties) {
         return MessageWindowChatMemory.builder()
-                .chatMemoryRepository(new InMemoryChatMemoryRepository())
-                .maxMessages(MAX_MESSAGES)
+                .chatMemoryRepository(repository)
+                .maxMessages(Math.max(1, properties.getMaxMessages()))
                 .build();
     }
 }

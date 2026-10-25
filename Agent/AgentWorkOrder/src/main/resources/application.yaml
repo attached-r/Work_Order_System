@@ -18,7 +18,8 @@ spring:
       port: 6379
       password: ${REDIS_PASSWORD:20050603RJ}
       database: 5
-      timeout: 10000
+      timeout: 2000         # 超时改为2s
+      connect-timeout: 2000
   ai:
     model:
       # 用 provider 反向驱动 Spring AI 的模型选择器：
@@ -110,6 +111,19 @@ agent:
       collection: agent_knowledge
       metric-type: COSINE             # 文本 embedding 常用度量，分数越大越相似
       index-type: IVF_FLAT            # 中小规模知识库：构建快、召回稳定
+  # M5 会话记忆配置
+  memory:
+    store: redis
+    # 结尾的冒号不能省：save/find/delete 都按 "前缀 + conversationId" 拼 key
+    key-prefix: "agent:chat:memory:"
+    ttl-days: 7
+    max-messages: 20
+
+  # M5 SSE 协议配置
+  sse:
+    heartbeat-seconds: 15       # 心跳间隔，防止网关空闲超时
+    idle-timeout-seconds: 60    # 模型多久没输出就发 error 事件
+    max-message-chars: 4000     # 用户消息长度上限
 
 # MyBatis-Plus：列名下划线 → 实体 camelCase 自动映射；主键自增
 mybatis-plus:

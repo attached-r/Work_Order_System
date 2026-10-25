@@ -191,10 +191,16 @@ function handleEditKeydown(event: KeyboardEvent): void {
         />
 
         <div v-if="showError" class="msg__notice msg__notice--error">
-          <span>{{ message.error || '生成失败,请重试' }}</span>
-          <!-- 只有最后一条可重试;历史错误只做展示,避免错误地重跑后面的问题 -->
+          <span :title="message.traceId ? `traceId: ${message.traceId}` : undefined">
+            {{ message.error || '生成失败,请重试' }}
+          </span>
+          <!--
+            只有最后一条可重试;历史错误只做展示,避免错误地重跑后面的问题。
+            M5:服务端 error 事件可能标记 retryable=false(例如模型配置错误),
+            这时重试也没用,隐藏按钮。
+          -->
           <button
-            v-if="isLastAssistant && !busy"
+            v-if="isLastAssistant && !busy && message.retryable !== false"
             type="button"
             class="msg__notice-btn"
             @click="emit('retry')"
@@ -206,7 +212,7 @@ function handleEditKeydown(event: KeyboardEvent): void {
         <div v-else-if="showStopped" class="msg__notice">
           <span>已停止生成</span>
           <button
-            v-if="isLastAssistant && !busy"
+            v-if="isLastAssistant && !busy && message.retryable !== false"
             type="button"
             class="msg__notice-btn"
             @click="emit('regenerate')"
@@ -244,7 +250,13 @@ function handleEditKeydown(event: KeyboardEvent): void {
         </button>
 
         <button
-          v-if="!isUser && isLastAssistant && !busy && !isStreaming"
+          v-if="
+            !isUser &&
+            isLastAssistant &&
+            !busy &&
+            !isStreaming &&
+            message.retryable !== false
+          "
           type="button"
           title="重新生成"
           @click="emit('regenerate')"

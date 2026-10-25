@@ -16,6 +16,7 @@ import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import reactor.core.publisher.Flux;
 
 import java.time.Duration;
@@ -91,19 +92,22 @@ public class MockLlmClient implements LlmClient {
     }
 
     @Override
-    public Flux<String> stream(String sessionId, String userMessage, String authToken) {
-        String reply = buildReply(sessionId, userMessage, authToken);
+    public Flux<String> stream(String sessionId, String userMessage, String authToken,String traceId) {
+        // 把 controller 的 traceId 传进来，保证 SSE/审计/日志用的是同一个
+        String reply = buildReply(sessionId, userMessage, authToken, traceId);
         // 按字符拆开、加一点延迟，观察端到端确实是一段段 SSE 事件推过来的
         return Flux.fromArray(reply.split("")).delayElements(CHUNK_DELAY);
     }
 
-    private String buildReply(String sessionId, String userMessage, String authToken) {
-        String traceId = UUID.randomUUID().toString();
-        UserPerms perms = permService.load(authToken, traceId);
+    private String buildReply(String sessionId, String userMessage, String authToken, String traceId) {
+        String effectiveTraceId = StringUtils.hasText(traceId)
+                ? traceId
+                : UUID.randomUUID().toString();
+        UserPerms perms = permService.load(authToken, effectiveTraceId);
 
         // 步骤 1：构造统一工具上下文（auth/session/trace/userId/provider），与 SpringAiLlmClient 完全一致
         ToolContext context = new ToolContext(
-                ToolContextKeys.build(authToken, sessionId, traceId, perms, PROVIDER));
+                ToolContextKeys.build(authToken, sessionId, effectiveTraceId, perms, PROVIDER));
 
         // 步骤 2：写路径优先。写权限可能没有 workorder:query，不能先被读闸门挡住
         String writeReply = tryWriteReply(sessionId, userMessage, perms, context);

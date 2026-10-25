@@ -1,8 +1,12 @@
 package com.agentworkorder.controller;
 
+import com.agentworkorder.config.SseProperties;
 import com.agentworkorder.llm.LlmClient;
+import com.agentworkorder.sse.AgentSseEvents;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -10,50 +14,105 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+import java.time.Duration;
+import java.util.UUID;
+import java.util.regex.Pattern;
 
 /**
- * Agent 对外唯一入口：SSE 流式对话端点。
+ * 对外唯一入口：SSE 流式对话（M5 协议 v2）。
  *
- * <p>职责刻意保持很薄——只做三件事：取参数、取 Authorization 头、把 {@link LlmClient} 的输出流
- * 逐段映射成 SSE 事件。它<b>不碰</b> Spring AI、也不碰 HTTP 工具细节，全靠 {@code LlmClient} 端口隔离。
- *
- * <p>用法：{@code GET /api/agent/chat?sessionId=s1&message=...}，带 {@code Authorization} 头。
- * 返回 {@code text/event-stream}，每个 token 一个事件，客户端逐字渲染。
+ * <p>M5 加了四件事：
+ * <ol>
+ *   <li>sessionId / message 入参校验（也顺手防了超长 Redis key）；</li>
+ *   <li>统一 traceId，并通过响应头 X-Trace-Id 返回；</li>
+ *   <li>空闲超时 → error 事件；正常结束 → done 事件；</li>
+ *   <li>每 15 秒一个 SSE 注释心跳，防止网关掐连接。</li>
+ * </ol>
  */
 @Slf4j
 @RestController
 @RequestMapping("/api/agent")
 public class AgentChatController {
 
-    private final LlmClient llmClient;
+    /** sessionId 只允许这些字符：既能做 Redis key，也不会造成 key 注入 */
+    private static final Pattern SESSION_ID = Pattern.compile("[A-Za-z0-9_-]{1,64}");
 
-    public AgentChatController(LlmClient llmClient) {
+    private final LlmClient llmClient;
+    private final AgentSseEvents events;
+    private final SseProperties properties;
+
+    public AgentChatController(LlmClient llmClient, AgentSseEvents events, SseProperties properties) {
         this.llmClient = llmClient;
+        this.events = events;
+        this.properties = properties;
     }
 
     @GetMapping(value = "/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<String>> chat(
             @RequestParam String sessionId,
             @RequestParam String message,
-            // 用户 JWT：完整 Authorization 头值，原样透传给项目一（可能缺省=未登录）
-            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization) {
-        return llmClient.stream(sessionId, message, authorization)
-                .map(token -> ServerSentEvent.builder(token).build()); //包装成sse流式字符串
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization,
+            HttpServletResponse response) {
+
+        // 步骤 1：同步校验。校验失败直接 400，不进入 SSE（客户端拿到普通 JSON 错误）
+        if (!SESSION_ID.matcher(sessionId).matches()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "sessionId 只能包含字母、数字、下划线、连字符，长度 1-64");
+        }
+        if (message == null || message.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "message 不能为空");
+        }
+        if (message.length() > properties.getMaxMessageChars()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "message 不能超过 " + properties.getMaxMessageChars() + " 字");
+        }
+
+        // 步骤 2：一轮对话一个 traceId；响应头先给客户端，后面 done/error 里也有
+        String traceId = UUID.randomUUID().toString();
+        long start = System.currentTimeMillis();
+        response.setHeader("X-Trace-Id", traceId);
+        response.setHeader(HttpHeaders.CACHE_CONTROL, "no-cache");
+        response.setHeader("X-Accel-Buffering", "no");   // Nginx 不缓冲
+
+        // 步骤 3：Flux.defer 很关键——让 llmClient.stream 里的同步异常也变成流上的 error，
+        //         从而被下面的 onErrorResume 捕获，而不是在 controller 返回前直接抛出。
+        Flux<ServerSentEvent<String>> body = Flux.defer(() ->
+                        llmClient.stream(sessionId, message, authorization, traceId))
+                .map(events::token)
+                .timeout(Duration.ofSeconds(Math.max(1, properties.getIdleTimeoutSeconds())))
+                .concatWith(Mono.fromSupplier(() ->
+                        events.done(traceId, System.currentTimeMillis() - start)))
+                // 放在 concatWith 之后：正常路径会发 done；异常路径只发 error，不会再补 done
+                .onErrorResume(e -> {
+                    // 日志保留完整堆栈；发给客户端的只有脱敏后的 code/message
+                    log.error("SSE 流异常：trace={}", traceId, e);
+                    return Flux.just(events.error(traceId, e));
+                });
+
+        // 步骤 4：心跳与正文合并；takeUntil 保证看到 done/error 就取消心跳并正常结束
+        Flux<ServerSentEvent<String>> heartbeat = Flux
+                .interval(Duration.ofSeconds(Math.max(1, properties.getHeartbeatSeconds())))
+                .map(i -> events.heartbeat());
+
+        return Flux.merge(body, heartbeat)
+                .takeUntil(events::isTerminal)
+                .doOnCancel(() -> log.info("客户端断开：trace={}", traceId));
     }
 
     /**
-     * 连通性自测端点：把 {@code context} 当提问发一趟大模型，阻塞收集全部 token 后整段返回。
-     *
-     * <p>与 {@code /chat} 的区别只在「阻塞 vs 流式」——它仍然走同一个 {@link LlmClient} 端口，
-     * 因此 {@code agent.llm.provider} 配成 {@code openai} 时能直接验证 key / base-url / model 是否配通，
-     * 配成 {@code mock} 时则只会得到 mock 的回显（说明不了 API 是否可用）。
+     * 连通性自测（调试用）：走同一个 LlmClient，阻塞收集全部 token。
+     * <p>M5 只补了 traceId 与 60 秒上限；它不是产品接口。
      */
-    @GetMapping(value = "/hello")
+    @GetMapping("/hello")
     public String hello(@RequestParam String context) {
-        return llmClient.stream("hello-test", context, null)
+        String traceId = UUID.randomUUID().toString();
+        return llmClient.stream("hello-test", context, null, traceId)
                 .collectList()
                 .map(tokens -> String.join("", tokens))
-                .block();
+                .block(Duration.ofSeconds(60));
     }
 }

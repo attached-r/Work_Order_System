@@ -140,9 +140,9 @@ function handleCommand(command: unknown, conversation: Conversation): void {
 async function handleClearAll(): Promise<void> {
   try {
     await ElMessageBox.confirm(
-      '清空后所有对话记录都会从本机删除且无法恢复' +
+      '清空后当前账号的对话记录都会从本机删除且无法恢复' +
         (props.streamingConversationId ? '，正在生成的回答也会立即停止。' : '。'),
-      '清空全部对话',
+      '清空当前账号的对话',
       {
         confirmButtonText: '清空',
         cancelButtonText: '取消',
@@ -231,9 +231,9 @@ async function handleClearAll(): Promise<void> {
         class="rail__clear"
         @click="handleClearAll"
       >
-        清空全部
+        清空当前账号
       </button>
-      <p>对话记录仅保存在本机浏览器</p>
+      <p>对话记录按账号保存在本机浏览器</p>
     </div>
   </aside>
 </template>

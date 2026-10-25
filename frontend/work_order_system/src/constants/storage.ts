@@ -13,12 +13,22 @@ export const TOKEN_KEY = 'wo_token'
 export const USER_KEY = 'wo_user'
 
 /**
- * Agent 对话记录。
+ * Agent 对话记录 key 的**前缀**。
  *
- * Agent 的会话记忆只存在它自己的进程里(每个 sessionId 最近 20 条),
- * 刷新页面或重启服务就没了,所以展示用的历史必须由前端自己落盘。
+ * 实际 key = `${AGENT_CHAT_KEY_PREFIX}${userId | 'anon'}`。
+ * 不能再用一个全局 key:同一个浏览器切换账号时,新用户会直接把上一个用户的
+ * 对话记录读出来(前端展示历史,与 Agent 后端的记忆是两套东西)。
  */
-export const AGENT_CHAT_KEY = 'wo_agent_chat'
+export const AGENT_CHAT_KEY_PREFIX = 'wo_agent_chat:'
 
-/** Agent 当前选中的会话 id,与消息体分开存,切换会话时不必重写整份历史 */
-export const AGENT_ACTIVE_KEY = 'wo_agent_active'
+/** Agent 当前选中会话 key 的前缀;同样按用户隔离 */
+export const AGENT_ACTIVE_KEY_PREFIX = 'wo_agent_active:'
+
+/**
+ * 旧版全局 key。
+ *
+ * 只用于升级时清理:旧数据没有用户维度,继续保留会让「切换账号看到别人历史」
+ * 的问题一直存在;清掉比错误迁移更安全。
+ */
+export const LEGACY_AGENT_CHAT_KEY = 'wo_agent_chat'
+export const LEGACY_AGENT_ACTIVE_KEY = 'wo_agent_active'

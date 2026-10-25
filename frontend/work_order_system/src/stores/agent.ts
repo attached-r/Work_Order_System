@@ -2,8 +2,9 @@
  * Agent 对话状态
  *
  * 为什么要前端自己存一份历史:
- *   Agent 的会话记忆只在它的进程内(每个 sessionId 最近 20 条),
- *   刷新页面或重启服务就没了。界面要能回看,所以展示记录落 localStorage。
+ *   Agent 的会话记忆在 agent 侧(M5 默认 Redis,可回滚进程内),但它只是「给模型的最近 20 条」,
+ *   不是面向用户的完整聊天记录;刷新页面/换浏览器仍需要能回看,所以展示记录按 userId 分 key
+ *   落 localStorage —— 同一个浏览器切换账号时,不会看到上一个账号的对话。
  *
  * 两条关键的流式纪律:
  *   1. token 增量不直接写响应式状态 —— 用 requestAnimationFrame + 40ms 节流合并,
@@ -11,10 +12,21 @@
  *   2. 落盘只在「发送开始 / 流结束 / 新建 / 删除」这些节点做,
  *      不能跟着 token 写 localStorage,否则既卡又容易撞配额。
  */
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
-import { AGENT_ACTIVE_KEY, AGENT_CHAT_KEY } from '@/constants/storage'
-import { MAX_MESSAGE_LENGTH, isAbortError, streamAgentChat } from '@/api/agent'
+import {
+  AGENT_ACTIVE_KEY_PREFIX,
+  AGENT_CHAT_KEY_PREFIX,
+  LEGACY_AGENT_ACTIVE_KEY,
+  LEGACY_AGENT_CHAT_KEY,
+} from '@/constants/storage'
+import { useUserStore } from '@/stores/user'
+import {
+  AgentApiError,
+  MAX_MESSAGE_LENGTH,
+  isAbortError,
+  streamAgentChat,
+} from '@/api/agent'
 
 export type MessageStatus = 'done' | 'streaming' | 'error' | 'stopped'
 
@@ -25,6 +37,10 @@ export interface ChatMessage {
   createdAt: number
   status: MessageStatus
   error?: string | null
+  /** M5:服务端返回的 traceId,用于排查;旧数据/旧接口可能没有 */
+  traceId?: string | null
+  /** M5:服务端建议是否值得重试;false 时界面不显示「重试」按钮 */
+  retryable?: boolean
 }
 
 export interface Conversation {
@@ -61,6 +77,46 @@ const DEFAULT_TITLE = '新对话'
 /** 无会话时返回同一个空数组,避免每次计算都产生新引用导致视图反复刷新 */
 const EMPTY_MESSAGES: ChatMessage[] = []
 
+/** 未登录用户的存储命名空间;登录后按 userId 隔离 */
+const ANON_OWNER = 'anon'
+
+/**
+ * 对话历史的归属者。
+ *
+ * 为什么用 userId 而不是 username:
+ *   - userId 稳定,用户名可以改;
+ *   - 未登录时没有 userId,统一落在 anon 命名空间。
+ */
+function ownerOf(userId: number | null | undefined): string {
+  return userId == null ? ANON_OWNER : String(userId)
+}
+
+/** 当前用户的对话记录 key;每个账号一份,互不污染 */
+function chatStorageKey(owner: string): string {
+  return `${AGENT_CHAT_KEY_PREFIX}${owner}`
+}
+
+/** 当前用户的「选中会话」key;与消息体分开存 */
+function activeStorageKey(owner: string): string {
+  return `${AGENT_ACTIVE_KEY_PREFIX}${owner}`
+}
+
+/**
+ * 清理旧版共享 key。
+ *
+ * 旧版把所有人的历史都写在 `wo_agent_chat` 一个 key 里,没有用户维度。
+ * 升级后如果保留它,「切换账号看到上一个人历史」的问题仍然存在;
+ * 直接清掉,让每个用户从自己的新 key 开始,比把共享数据错误迁移给某个用户更安全。
+ */
+function removeLegacyAgentHistory(): void {
+  try {
+    localStorage.removeItem(LEGACY_AGENT_CHAT_KEY)
+    localStorage.removeItem(LEGACY_AGENT_ACTIVE_KEY)
+  } catch {
+    // localStorage 不可用时忽略
+  }
+}
+
 // ---------------------------------------------------------------------------
 // 纯工具
 // ---------------------------------------------------------------------------
@@ -95,6 +151,9 @@ function normalizeMessage(raw: unknown): ChatMessage | null {
 
   const content = typeof raw.content === 'string' ? raw.content : ''
   const createdAt = typeof raw.createdAt === 'number' ? raw.createdAt : Date.now()
+  // M5 字段:旧数据没有 traceId / retryable,按「有 trace 更好、默认可重试」处理
+  const traceId = typeof raw.traceId === 'string' ? raw.traceId : null
+  const retryable = raw.retryable !== false
 
   // 步骤 1:识别状态。刷新页面时残留的 streaming 一律视为「中断」。
   let status: MessageStatus = 'done'
@@ -111,7 +170,16 @@ function normalizeMessage(raw: unknown): ChatMessage | null {
     error = '上次生成在页面刷新时中断'
   }
 
-  return { id: raw.id, role: raw.role, content, createdAt, status, error }
+  return {
+    id: raw.id,
+    role: raw.role,
+    content,
+    createdAt,
+    status,
+    error,
+    traceId,
+    retryable,
+  }
 }
 
 function normalizeConversation(raw: unknown): Conversation | null {
@@ -147,6 +215,8 @@ function normalizeConversation(raw: unknown): Conversation | null {
       createdAt: lastMessage.createdAt,
       status: 'error',
       error: '上次生成在页面刷新时中断,可点击重试',
+      traceId: null,
+      retryable: true,
     })
   }
 
@@ -161,11 +231,12 @@ function normalizeConversation(raw: unknown): Conversation | null {
   }
 }
 
-/** 从 localStorage 恢复历史;任何异常都退化为「没有历史」,不能阻塞应用启动 */
-function loadConversations(): Conversation[] {
+/** 从当前用户的 localStorage 恢复历史;任何异常都退化为「没有历史」 */
+function loadConversations(owner: string): Conversation[] {
+  const key = chatStorageKey(owner)
   let raw: string | null = null
   try {
-    raw = localStorage.getItem(AGENT_CHAT_KEY)
+    raw = localStorage.getItem(key)
   } catch {
     return []
   }
@@ -174,7 +245,7 @@ function loadConversations(): Conversation[] {
   try {
     const parsed: unknown = JSON.parse(raw)
     if (!isRecord(parsed) || !Array.isArray(parsed.conversations)) {
-      localStorage.removeItem(AGENT_CHAT_KEY)
+      localStorage.removeItem(key)
       return []
     }
 
@@ -186,7 +257,7 @@ function loadConversations(): Conversation[] {
   } catch {
     // 被手改坏 / 旧版本格式不兼容,整份丢弃比带着坏数据运行更安全
     try {
-      localStorage.removeItem(AGENT_CHAT_KEY)
+      localStorage.removeItem(key)
     } catch {
       // localStorage 本身不可用时忽略
     }
@@ -194,10 +265,10 @@ function loadConversations(): Conversation[] {
   }
 }
 
-/** 恢复上次选中的会话;找不到就退回最新一个 */
-function loadActiveId(conversations: Conversation[]): string | null {
+/** 恢复当前用户上次选中的会话;找不到就退回最新一个 */
+function loadActiveId(conversations: Conversation[], owner: string): string | null {
   try {
-    const saved = localStorage.getItem(AGENT_ACTIVE_KEY)
+    const saved = localStorage.getItem(activeStorageKey(owner))
     if (saved && conversations.some((c) => c.id === saved)) return saved
   } catch {
     // ignore
@@ -227,6 +298,8 @@ function buildStorageCopy(
       createdAt: message.createdAt,
       status: message.status === 'streaming' ? 'error' : message.status,
       error: message.error ?? null,
+      traceId: message.traceId ?? null,
+      retryable: message.retryable !== false,
     })),
   }))
 }
@@ -235,7 +308,8 @@ function buildStorageCopy(
  * 写入历史。配额不足时逐级降级(少留会话、少留消息),
  * 仍然失败就清掉存储键 —— 内存里的对话必须继续可用。
  */
-function persistConversations(conversations: Conversation[]): void {
+function persistConversations(conversations: Conversation[], owner: string): void {
+  const key = chatStorageKey(owner)
   const attempts: Conversation[][] = [
     buildStorageCopy(conversations, MAX_CONVERSATIONS, MAX_MESSAGES_PER_CONVERSATION),
     buildStorageCopy(conversations, 10, 40),
@@ -245,7 +319,7 @@ function persistConversations(conversations: Conversation[]): void {
   for (const copy of attempts) {
     try {
       localStorage.setItem(
-        AGENT_CHAT_KEY,
+        key,
         JSON.stringify({ version: STORAGE_VERSION, conversations: copy }),
       )
       return
@@ -255,7 +329,7 @@ function persistConversations(conversations: Conversation[]): void {
   }
 
   try {
-    localStorage.removeItem(AGENT_CHAT_KEY)
+    localStorage.removeItem(key)
   } catch {
     // 连 removeItem 都失败就彻底放弃持久化
   }
@@ -266,9 +340,22 @@ function persistConversations(conversations: Conversation[]): void {
 // ---------------------------------------------------------------------------
 
 export const useAgentStore = defineStore('agent', () => {
-  // 步骤 1:初始化时同步恢复历史与选中会话
-  const conversations = ref<Conversation[]>(loadConversations())
-  const activeId = ref<string | null>(loadActiveId(conversations.value))
+  // 当前登录用户决定对话历史的命名空间:
+  //   - 用户 A → wo_agent_chat:1
+  //   - 用户 B → wo_agent_chat:2
+  //   - 未登录 → wo_agent_chat:anon
+  const userStore = useUserStore()
+
+  function currentOwner(): string {
+    return ownerOf(userStore.user?.userId)
+  }
+
+  // 升级时先清掉旧版共享 key,避免继续读到「上一个人的历史」
+  removeLegacyAgentHistory()
+
+  // 步骤 1:初始化时同步恢复**当前用户**的历史与选中会话
+  const conversations = ref<Conversation[]>(loadConversations(currentOwner()))
+  const activeId = ref<string | null>(loadActiveId(conversations.value, currentOwner()))
 
   // 全局同时只允许一条流:切换会话或离开页面都会中止当前流
   const streaming = ref(false)
@@ -292,18 +379,21 @@ export const useAgentStore = defineStore('agent', () => {
   /** 流序号:旧的流收尾时不能清掉新流的状态 */
   let streamSeq = 0
 
-  function persistActive(): void {
+  function persistActive(owner: string = currentOwner()): void {
     try {
-      if (activeId.value) localStorage.setItem(AGENT_ACTIVE_KEY, activeId.value)
-      else localStorage.removeItem(AGENT_ACTIVE_KEY)
+      const key = activeStorageKey(owner)
+      if (activeId.value) localStorage.setItem(key, activeId.value)
+      else localStorage.removeItem(key)
     } catch {
       // ignore
     }
   }
 
   function saveHistory(): void {
-    persistConversations(conversations.value)
-    persistActive()
+    // 只写当前用户自己的 key,不能覆盖别人的历史
+    const owner = currentOwner()
+    persistConversations(conversations.value, owner)
+    persistActive(owner)
   }
 
   // ---- 流式增量合并 ----
@@ -444,7 +534,7 @@ export const useAgentStore = defineStore('agent', () => {
     streamingConversationId.value = null
   }
 
-  /** 清空本机所有对话;正在生成时先强制中止,避免旧流把数据写回来 */
+  /** 清空当前用户在本机的对话;正在生成时先强制中止,避免旧流把数据写回来 */
   function clearAllConversations(): void {
     if (streaming.value) invalidateStream()
 
@@ -452,12 +542,36 @@ export const useAgentStore = defineStore('agent', () => {
     activeId.value = null
 
     try {
-      localStorage.removeItem(AGENT_CHAT_KEY)
-      localStorage.removeItem(AGENT_ACTIVE_KEY)
+      const owner = currentOwner()
+      localStorage.removeItem(chatStorageKey(owner))
+      localStorage.removeItem(activeStorageKey(owner))
     } catch {
       // 存储不可用时忽略:内存里已经清空
     }
   }
+
+  /**
+   * 登录用户切换时,切到对应账号的历史。
+   *
+   * 触发场景:
+   *   - 登录成功:anon → 用户 A,读到 A 的历史;
+   *   - 退出登录:用户 A → anon,不再显示 A 的历史;
+   *   - 换号登录:A → B,读到 B 的历史。
+   *
+   * 切换前先作废旧流,避免 A 的流在切换后把 token 写进 B 的消息里。
+   * 旧用户的历史仍然留在自己的 key 下,下次登录还能看到。
+   */
+  watch(
+    () => userStore.user?.userId ?? null,
+    () => {
+      if (streaming.value) invalidateStream()
+
+      const owner = currentOwner()
+      conversations.value = loadConversations(owner)
+      activeId.value = loadActiveId(conversations.value, owner)
+      persistActive(owner)
+    },
+  )
 
   // ---- 流式对话 ----
 
@@ -505,6 +619,8 @@ export const useAgentStore = defineStore('agent', () => {
       createdAt: now,
       status: 'streaming',
       error: null,
+      traceId: null,
+      retryable: true,
     }
     conversation.messages.push(assistant)
     conversation.updatedAt = now
@@ -526,7 +642,7 @@ export const useAgentStore = defineStore('agent', () => {
     saveHistory()
 
     try {
-      await streamAgentChat({
+      const result = await streamAgentChat({
         sessionId: conversation.id,
         message: prompt,
         signal: controller.signal,
@@ -540,8 +656,10 @@ export const useAgentStore = defineStore('agent', () => {
 
       if (seq !== streamSeq) return
 
-      // 步骤 4:干净结束。空回答大概率是上游异常,标成可重试的错误。
+      // 步骤 4:收到 done 才算干净结束。空回答大概率是上游异常,标成可重试的错误。
       cancelFlush()
+      liveAssistant.traceId = result.traceId
+      liveAssistant.retryable = true
       if (!liveAssistant.content) {
         liveAssistant.status = 'error'
         liveAssistant.error = '未收到回答,请重试'
@@ -555,6 +673,7 @@ export const useAgentStore = defineStore('agent', () => {
 
       // 步骤 5:区分「用户停止」和「真失败」。两种情况都保留已输出内容。
       if (isAbortError(error)) {
+        liveAssistant.retryable = true
         if (liveAssistant.content) {
           liveAssistant.status = 'stopped'
         } else {
@@ -565,6 +684,13 @@ export const useAgentStore = defineStore('agent', () => {
       } else {
         liveAssistant.status = 'error'
         liveAssistant.error = error instanceof Error ? error.message : '生成失败,请重试'
+        // M5:服务端 error 事件会带 traceId 与 retryable;普通网络错误则保持默认可重试
+        if (error instanceof AgentApiError) {
+          liveAssistant.traceId = error.traceId
+          liveAssistant.retryable = error.retryable
+        } else {
+          liveAssistant.retryable = true
+        }
       }
     } finally {
       // 步骤 6:只有当前流才能清理全局状态,防止旧流的收尾覆盖新流
@@ -615,6 +741,9 @@ export const useAgentStore = defineStore('agent', () => {
     const last = messages[messages.length - 1]
     if (!last || last.role !== 'assistant') return
 
+    // M5:服务端明确说「重试也没用」(例如模型 key 配错)时,不再自动重跑
+    if (last.status === 'error' && last.retryable === false) return
+
     // 从尾部往前找最近一条用户消息
     let userIndex = -1
     for (let i = messages.length - 1; i >= 0; i -= 1) {
@@ -645,6 +774,8 @@ export const useAgentStore = defineStore('agent', () => {
     const last = messages[messages.length - 1]
     if (!last || last.role !== 'assistant') return
     if (last.status !== 'error' && last.status !== 'stopped') return
+    // 服务端明确标记「不可重试」时,连入口都不进
+    if (last.retryable === false) return
 
     regenerateLast()
   }

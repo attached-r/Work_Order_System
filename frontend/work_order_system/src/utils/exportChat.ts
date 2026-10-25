@@ -43,6 +43,8 @@ export function buildConversationMarkdown(conversation: Conversation): string {
 
     if (message.status === 'error') {
       lines.push(`> 生成失败：${message.error || '未知错误'}`, '')
+      // 方便把问题反馈给后端排查;旧消息可能没有 traceId
+      if (message.traceId) lines.push(`> traceId：${message.traceId}`, '')
     } else if (message.status === 'stopped') {
       lines.push('> 已停止生成', '')
     }

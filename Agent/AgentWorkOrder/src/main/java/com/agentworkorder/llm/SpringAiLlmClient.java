@@ -18,6 +18,7 @@ import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import reactor.core.publisher.Flux;
 
 import java.util.ArrayList;
@@ -56,14 +57,14 @@ public class SpringAiLlmClient implements LlmClient {
     private final ToolPermissionRegistry permissionRegistry;
 
     public SpringAiLlmClient(ChatClient.Builder builder,
-                             WorkOrderTools workOrderTools,
-                             ObjectProvider<KnowledgeTools> knowledgeToolsProvider,
-                             ObjectProvider<WorkOrderWriteTools> writeToolsProvider,
-                             LlmProperties llmProperties,
-                             SystemPromptComposer promptComposer,
-                             ChatMemory chatMemory,
-                             PermService permService,
-                             ToolPermissionRegistry permissionRegistry) {
+                                WorkOrderTools workOrderTools,
+                                ObjectProvider<KnowledgeTools> knowledgeToolsProvider,
+                                ObjectProvider<WorkOrderWriteTools> writeToolsProvider,
+                                LlmProperties llmProperties,
+                                SystemPromptComposer promptComposer,
+                                ChatMemory chatMemory,
+                                PermService permService,
+                                ToolPermissionRegistry permissionRegistry) {
         this.provider = llmProperties.getProvider();
         this.permService = permService;
         this.permissionRegistry = permissionRegistry;
@@ -98,23 +99,29 @@ public class SpringAiLlmClient implements LlmClient {
     }
 
     @Override
-    public Flux<String> stream(String sessionId, String userMessage, String authToken) {
-        // 一轮对话一个 traceId，供本轮所有工具调用的审计流水聚合
-        String traceId = UUID.randomUUID().toString();
+    public Flux<String> stream(String sessionId, String userMessage, String authToken, String traceId) {
 
-        UserPerms perms = permService.load(authToken, traceId);
+        //
+        String effectiveTraceId = StringUtils.hasText(traceId) ? traceId : java.util.UUID.randomUUID().toString();
+
+        UserPerms perms = permService.load(authToken,effectiveTraceId);
+
+        // 关键：记忆键 = 用户 + 会话，防止 B 用户传 A 用户的 sessionId 读到 A 的历史
+        String conversationId = (perms.userId() == null ? "anon" : perms.userId().toString())
+                + ":" + sessionId;
+
         List<ToolCallback> visible = visibleToolCallbacks(perms);
         log.info("会话 {} 处理请求：trace={} provider={} user={} 可见工具={}",
-                sessionId, traceId, provider, perms.username(), visible.size());
+                sessionId, effectiveTraceId, provider, perms.username(), visible.size());
 
         return chatClient.prompt()
                 .user(userMessage)
                 // 本次会话的记忆键；MessageChatMemoryAdvisor 据此读写对应会话的消息窗口
-                .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, sessionId))
+                .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, conversationId))
                 // 只把用户有权使用的工具交给模型（无权限的工具模型根本看不到，fail-closed）
                 .toolCallbacks(visible)
                 // JWT + session/trace/userId/provider 显式放进工具上下文，供 @Tool 透传与审计读取
-                .toolContext(ToolContextKeys.build(authToken, sessionId, traceId, perms, provider))
+                .toolContext(ToolContextKeys.build(authToken, sessionId, effectiveTraceId,perms, provider))
                 .stream()
                 .content();
     }
