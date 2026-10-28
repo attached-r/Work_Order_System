@@ -80,11 +80,11 @@ public class AgentChatController {
 
         // 步骤 3：Flux.defer 很关键——让 llmClient.stream 里的同步异常也变成流上的 error，
         //         从而被下面的 onErrorResume 捕获，而不是在 controller 返回前直接抛出。
-        Flux<ServerSentEvent<String>> body = Flux.defer(() ->
+        Flux<ServerSentEvent<String>> body = Flux.defer(() ->  //被订阅时 执行
                         llmClient.stream(sessionId, message, authorization, traceId))
-                .map(events::token)
+                .map(events::token) // 把 Flux<String> 包装成 Flux<ServerSentEvent<String>>
                 .timeout(Duration.ofSeconds(Math.max(1, properties.getIdleTimeoutSeconds())))
-                .concatWith(Mono.fromSupplier(() ->
+                .concatWith(Mono.fromSupplier(() -> // 消息发送给完毕 追加Mono消息
                         events.done(traceId, System.currentTimeMillis() - start)))
                 // 放在 concatWith 之后：正常路径会发 done；异常路径只发 error，不会再补 done
                 .onErrorResume(e -> {

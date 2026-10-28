@@ -6,6 +6,7 @@ import com.agentworkorder.knowledge.KnowledgeTools;
 import com.agentworkorder.perm.PermService;
 import com.agentworkorder.perm.ToolPermissionRegistry;
 import com.agentworkorder.perm.UserPerms;
+import com.agentworkorder.resilience.ResilienceGuard;
 import com.agentworkorder.tool.ToolContextKeys;
 import com.agentworkorder.tool.WorkOrderTools;
 import com.agentworkorder.tool.WorkOrderWriteTools;
@@ -55,6 +56,7 @@ public class SpringAiLlmClient implements LlmClient {
 
     private final PermService permService;
     private final ToolPermissionRegistry permissionRegistry;
+    private final ResilienceGuard resilience;
 
     public SpringAiLlmClient(ChatClient.Builder builder,
                                 WorkOrderTools workOrderTools,
@@ -64,10 +66,12 @@ public class SpringAiLlmClient implements LlmClient {
                                 SystemPromptComposer promptComposer,
                                 ChatMemory chatMemory,
                                 PermService permService,
-                                ToolPermissionRegistry permissionRegistry) {
+                                ToolPermissionRegistry permissionRegistry,
+                                ResilienceGuard resilience) {
         this.provider = llmProperties.getProvider();
         this.permService = permService;
         this.permissionRegistry = permissionRegistry;
+        this.resilience = resilience;
 
         // 步骤 1：按实际注册的 Bean 拼系统提示词——
         //         RAG 关闭时 KnowledgeTools 不存在；写开关关闭时 WorkOrderWriteTools 不存在，
@@ -114,16 +118,19 @@ public class SpringAiLlmClient implements LlmClient {
         log.info("会话 {} 处理请求：trace={} provider={} user={} 可见工具={}",
                 sessionId, effectiveTraceId, provider, perms.username(), visible.size());
 
-        return chatClient.prompt()
-                .user(userMessage)
-                // 本次会话的记忆键；MessageChatMemoryAdvisor 据此读写对应会话的消息窗口
-                .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, conversationId))
-                // 只把用户有权使用的工具交给模型（无权限的工具模型根本看不到，fail-closed）
-                .toolCallbacks(visible)
-                // JWT + session/trace/userId/provider 显式放进工具上下文，供 @Tool 透传与审计读取
-                .toolContext(ToolContextKeys.build(authToken, sessionId, effectiveTraceId,perms, provider))
-                .stream()
-                .content();
+        // M5：LLM 也走统一熔断。熔断打开时 guardFlux 直接返回 CircuitOpenException，
+        // controller 会把它映射成 503 error 事件，而不是让用户一直等首 token。
+        return resilience.guardFlux("llm",
+                chatClient.prompt()
+                        .user(userMessage)
+                        // 本次会话的记忆键；MessageChatMemoryAdvisor 据此读写对应会话的消息窗口
+                        .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, conversationId))
+                        // 只把用户有权使用的工具交给模型（无权限的工具模型根本看不到，fail-closed）
+                        .toolCallbacks(visible)
+                        // JWT + session/trace/userId/provider 显式放进工具上下文，供 @Tool 透传与审计读取
+                        .toolContext(ToolContextKeys.build(authToken, sessionId, effectiveTraceId, perms, provider))
+                        .stream()
+                        .content());
     }
 
     /** 按用户权限过滤工具：只保留「所需权限码在用户清单里」的 {@link ToolCallback}。 */

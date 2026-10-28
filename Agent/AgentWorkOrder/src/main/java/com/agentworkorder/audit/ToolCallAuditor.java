@@ -2,6 +2,7 @@ package com.agentworkorder.audit;
 
 import com.agentworkorder.audit.mapper.AgentToolCallLogMapper;
 import com.agentworkorder.config.AuditProperties;
+import com.agentworkorder.metrics.AgentMetrics;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -31,10 +32,12 @@ public class ToolCallAuditor {
 
     private final AgentToolCallLogMapper mapper;
     private final AuditProperties properties;
+    private final AgentMetrics metrics;
 
-    public ToolCallAuditor(AgentToolCallLogMapper mapper, AuditProperties properties) {
+    public ToolCallAuditor(AgentToolCallLogMapper mapper, AuditProperties properties, AgentMetrics metrics) {
         this.mapper = mapper;
         this.properties = properties;
+        this.metrics = metrics;
     }
 
     /**
@@ -76,6 +79,7 @@ public class ToolCallAuditor {
             mapper.insert(entry);
         } catch (Exception e) {
             // 审计失败只告警：绝不能让它影响对话主流程
+            metrics.auditFailure();
             log.warn("审计写入失败（不影响主流程）：tool={} trace={} err={}", toolName, ctx.traceId(), e.toString());
         }
     }

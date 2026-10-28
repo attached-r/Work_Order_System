@@ -1,0 +1,304 @@
+{
+  "version": 1,
+  "description": "Agent 质量评测集：覆盖数据查询、RAG、混合、写操作预览、无工具场景。问题中的 {order_id} / {handler_id} 由脚本参数替换。",
+  "cases": [
+    {
+      "id": "data-01",
+      "category": "data",
+      "question": "帮我看看当前有哪些工单",
+      "expect_tools": ["listWorkOrders"],
+      "match": "exact",
+      "must_contain": ["工单"],
+      "notes": "最基础的列表查询，不应调用 RAG 或写工具"
+    },
+    {
+      "id": "data-02",
+      "category": "data",
+      "question": "查询哪些超时工单",
+      "expect_tools": ["listWorkOrders"],
+      "match": "exact",
+      "expect_args_contains": {
+        "status": ["7", "超时"]
+      },
+      "must_contain": ["超时"],
+      "notes": "状态过滤应传 7 或中文「超时」"
+    },
+    {
+      "id": "data-03",
+      "category": "data",
+      "question": "列出待审核的工单",
+      "expect_tools": ["listWorkOrders"],
+      "match": "exact",
+      "expect_args_contains": {
+        "status": ["0", "待审核"]
+      },
+      "must_contain": ["待审核"],
+      "notes": "状态过滤应传 0 或中文「待审核」"
+    },
+    {
+      "id": "data-04",
+      "category": "data",
+      "question": "处理中的工单有哪些",
+      "expect_tools": ["listWorkOrders"],
+      "match": "exact",
+      "expect_args_contains": {
+        "status": ["2", "处理中"]
+      },
+      "notes": "状态过滤应传 2 或中文「处理中」"
+    },
+    {
+      "id": "data-05",
+      "category": "data",
+      "question": "查一下工单 {order_id} 的详情",
+      "expect_tools": ["queryWorkOrder"],
+      "match": "exact",
+      "expect_args_contains": {
+        "id": ["{order_id}"]
+      },
+      "notes": "详情必须按用户给出的 ID 查询"
+    },
+    {
+      "id": "data-06",
+      "category": "data",
+      "question": "工单 {order_id} 现在是什么状态",
+      "expect_tools": ["queryWorkOrder"],
+      "match": "exact",
+      "expect_args_contains": {
+        "id": ["{order_id}"]
+      },
+      "notes": "问状态应查实时详情，而不是查知识库"
+    },
+    {
+      "id": "data-07",
+      "category": "data",
+      "question": "有没有标题包含打印机的工单",
+      "expect_tools": ["listWorkOrders"],
+      "match": "exact",
+      "expect_args_contains": {
+        "keyword": ["打印机"]
+      },
+      "notes": "关键字过滤应传给列表工具"
+    },
+
+    {
+      "id": "rag-01",
+      "category": "rag",
+      "question": "工单被审核驳回后应该怎么处理",
+      "expect_tools": ["searchKnowledge"],
+      "match": "exact",
+      "expect_rag_source_any": ["04-operating-sop.md", "01-work-order-state-machine.md"],
+      "must_contain": ["驳回"],
+      "notes": "规则问题，应检索 SOP / 状态机"
+    },
+    {
+      "id": "rag-02",
+      "category": "rag",
+      "question": "工单从提交到完成要经过哪些状态",
+      "expect_tools": ["searchKnowledge"],
+      "match": "exact",
+      "expect_rag_source_any": ["01-work-order-state-machine.md"],
+      "must_contain": ["待审核", "待派单"],
+      "notes": "状态链路，必须覆盖主链路关键状态"
+    },
+    {
+      "id": "rag-03",
+      "category": "rag",
+      "question": "哪些角色可以审核工单",
+      "expect_tools": ["searchKnowledge"],
+      "match": "exact",
+      "expect_rag_source_any": ["02-roles-and-permissions.md"],
+      "must_contain": ["审核"],
+      "notes": "角色/权限问题，不应查实时工单"
+    },
+    {
+      "id": "rag-04",
+      "category": "rag",
+      "question": "派单和转派有什么区别",
+      "expect_tools": ["searchKnowledge"],
+      "match": "exact",
+      "expect_rag_source_any": ["01-work-order-state-machine.md", "04-operating-sop.md"],
+      "must_contain": ["派单", "转派"],
+      "notes": "派单/转派规则"
+    },
+    {
+      "id": "rag-05",
+      "category": "rag",
+      "question": "工单超时了会怎么样",
+      "expect_tools": ["searchKnowledge"],
+      "match": "exact",
+      "expect_rag_source_any": ["01-work-order-state-machine.md", "05-faq.md"],
+      "must_contain": ["超时"],
+      "notes": "超时关闭规则"
+    },
+    {
+      "id": "rag-06",
+      "category": "rag",
+      "question": "验收不通过怎么办",
+      "expect_tools": ["searchKnowledge"],
+      "match": "exact",
+      "expect_rag_source_any": ["01-work-order-state-machine.md", "04-operating-sop.md", "05-faq.md"],
+      "must_contain": ["验收"],
+      "notes": "验收退回规则"
+    },
+    {
+      "id": "rag-07",
+      "category": "rag",
+      "question": "撤回工单需要什么权限",
+      "expect_tools": ["searchKnowledge"],
+      "match": "exact",
+      "expect_rag_source_any": ["02-roles-and-permissions.md"],
+      "must_contain": ["撤回"],
+      "notes": "权限码问题"
+    },
+    {
+      "id": "rag-08",
+      "category": "rag",
+      "question": "工单有哪几种类型",
+      "expect_tools": ["searchKnowledge"],
+      "match": "exact",
+      "expect_rag_source_any": ["03-work-order-types-and-fields.md"],
+      "must_contain": ["类型"],
+      "notes": "工单类型字段说明"
+    },
+
+    {
+      "id": "mix-01",
+      "category": "mixed",
+      "question": "工单 {order_id} 被驳回的话，我该怎么重新提交",
+      "expect_tools": ["queryWorkOrder", "searchKnowledge"],
+      "match": "contains",
+      "must_contain": ["重新提交"],
+      "notes": "先查实时状态，再查规则；两个工具都期望出现"
+    },
+    {
+      "id": "mix-02",
+      "category": "mixed",
+      "question": "查一下工单 {order_id}，然后告诉我处理中的单一般怎么派单",
+      "expect_tools": ["queryWorkOrder", "searchKnowledge"],
+      "match": "contains",
+      "notes": "实时数据 + 规则混合"
+    },
+    {
+      "id": "mix-03",
+      "category": "mixed",
+      "question": "我这个部门的待审核工单有哪些，审核流程是什么",
+      "expect_tools": ["listWorkOrders", "searchKnowledge"],
+      "match": "contains",
+      "notes": "列表 + 审核规则"
+    },
+    {
+      "id": "mix-04",
+      "category": "mixed",
+      "question": "工单 {order_id} 现在什么状态，如果待验收我该怎么验收",
+      "expect_tools": ["queryWorkOrder", "searchKnowledge"],
+      "match": "contains",
+      "notes": "实时状态 + 验收规则"
+    },
+    {
+      "id": "mix-05",
+      "category": "mixed",
+      "question": "有哪些超时工单，超时后还能操作吗",
+      "expect_tools": ["listWorkOrders", "searchKnowledge"],
+      "match": "contains",
+      "notes": "列表 + 超时规则"
+    },
+
+    {
+      "id": "write-01",
+      "category": "write",
+      "question": "审核通过工单 {order_id}",
+      "expect_tools": ["reviewWorkOrder"],
+      "match": "exact",
+      "expect_args_contains": {
+        "approved": ["true"]
+      },
+      "notes": "第一次调用必须是预览；脚本只验证工具/参数，不自动确认"
+    },
+    {
+      "id": "write-02",
+      "category": "write",
+      "question": "驳回工单 {order_id}，原因写资料不全",
+      "expect_tools": ["reviewWorkOrder"],
+      "match": "exact",
+      "expect_args_contains": {
+        "approved": ["false"],
+        "remark": ["资料不全"]
+      },
+      "notes": "驳回必须显式 approved=false，且原因进入参数"
+    },
+    {
+      "id": "write-03",
+      "category": "write",
+      "question": "把工单 {order_id} 派给处理人 {handler_id}",
+      "expect_tools": ["dispatchWorkOrder"],
+      "match": "exact",
+      "expect_args_contains": {
+        "handlerId": ["{handler_id}"]
+      },
+      "notes": "派单必须带处理人 ID"
+    },
+    {
+      "id": "write-04",
+      "category": "write",
+      "question": "把工单 {order_id} 转派给处理人 {handler_id}",
+      "expect_tools": ["transferWorkOrder"],
+      "match": "exact",
+      "expect_args_contains": {
+        "handlerId": ["{handler_id}"]
+      },
+      "notes": "转派必须带新处理人 ID"
+    },
+    {
+      "id": "write-05",
+      "category": "write",
+      "question": "工单 {order_id} 处理完成了",
+      "expect_tools": ["processWorkOrder"],
+      "match": "exact",
+      "notes": "处理完成动作；仅预览"
+    },
+    {
+      "id": "write-06",
+      "category": "write",
+      "question": "验收通过工单 {order_id}",
+      "expect_tools": ["acceptWorkOrder"],
+      "match": "exact",
+      "expect_args_contains": {
+        "approved": ["true"]
+      },
+      "notes": "验收通过必须 approved=true"
+    },
+
+    {
+      "id": "none-01",
+      "category": "no-tool",
+      "question": "你好，你能做什么",
+      "expect_tools": [],
+      "match": "exact",
+      "notes": "问候/能力介绍，不需要工具"
+    },
+    {
+      "id": "none-02",
+      "category": "no-tool",
+      "question": "今天天气怎么样",
+      "expect_tools": [],
+      "match": "exact",
+      "notes": "与工单无关，不应调用业务工具"
+    },
+    {
+      "id": "none-03",
+      "category": "no-tool",
+      "question": "给我讲个笑话",
+      "expect_tools": [],
+      "match": "exact",
+      "notes": "闲聊，不应调用工具"
+    },
+    {
+      "id": "none-04",
+      "category": "no-tool",
+      "question": "不要调用任何工具，只用一句话解释什么是工单",
+      "expect_tools": [],
+      "match": "exact",
+      "notes": "显式禁止工具，考模型是否服从"
+    }
+  ]
+}

@@ -25,5 +25,10 @@ CREATE TABLE `agent_tool_call_log` (
   PRIMARY KEY (`id`),
   KEY `idx_session`      (`session_id`),
   KEY `idx_user_time`    (`user_id`, `create_time`),
-  KEY `idx_tool_time`    (`tool_name`, `create_time`)
+  KEY `idx_tool_time`    (`tool_name`, `create_time`),
+  -- M5：审计保留期清理按 create_time 范围删除，必须有单列索引，否则全表扫描
+  KEY `idx_create_time`  (`create_time`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT='Agent 工具调用审计日志(只增不改)';
+
+-- 已经建过表的库，执行下面这一句补索引（新库直接跑上面的 CREATE TABLE 即可）
+-- ALTER TABLE `agent_tool_call_log` ADD KEY `idx_create_time` (`create_time`);

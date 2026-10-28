@@ -81,9 +81,13 @@ out/
 
 # ============ Environment ============
 .env
-.env.local
-.env.*.local
+.env.*
+# 模板必须提交；真实值不要提交
+!.env.example
 *.pem
+
+# ============ Runtime data ============
+data/
 
 # ============ Logs ============
 *.log

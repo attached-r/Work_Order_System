@@ -1,8 +1,13 @@
 package com.agentworkorder.tool;
 
 import com.agentworkorder.audit.AuditedToolInvoker;
+import com.agentworkorder.audit.ToolResult;
 import com.agentworkorder.client.ToolChangeStatusRequest;
 import com.agentworkorder.client.WorkOrderToolClient;
+import com.agentworkorder.metrics.AgentMetrics;
+import com.agentworkorder.perm.PermService;
+import com.agentworkorder.perm.ToolPermissionRegistry;
+import com.agentworkorder.perm.UserPerms;
 import com.agentworkorder.write.PendingWrite;
 import com.agentworkorder.write.WriteConfirmationService;
 import com.agentworkorder.write.WriteGuard;
@@ -50,19 +55,28 @@ public class WorkOrderWriteTools {
     private final WriteGuard writeGuard;
     private final WriteProperties writeProperties;
     private final ObjectMapper objectMapper;
+    private final PermService permService;
+    private final ToolPermissionRegistry permissionRegistry;
+    private final AgentMetrics metrics;
 
     public WorkOrderWriteTools(WorkOrderToolClient toolClient,
                                AuditedToolInvoker auditedToolInvoker,
                                WriteConfirmationService confirmationService,
                                WriteGuard writeGuard,
                                WriteProperties writeProperties,
-                               ObjectMapper objectMapper) {
+                               ObjectMapper objectMapper,
+                               PermService permService,
+                               ToolPermissionRegistry permissionRegistry,
+                               AgentMetrics metrics) {
         this.toolClient = toolClient;
         this.auditedToolInvoker = auditedToolInvoker;
         this.confirmationService = confirmationService;
         this.writeGuard = writeGuard;
         this.writeProperties = writeProperties;
         this.objectMapper = objectMapper;
+        this.permService = permService;
+        this.permissionRegistry = permissionRegistry;
+        this.metrics = metrics;
     }
 
     /**
@@ -225,13 +239,13 @@ public class WorkOrderWriteTools {
         boolean confirm = StringUtils.hasText(confirmationToken);
         Map<String, Object> args = auditArgs(confirm, id, action, approved, handlerId, remark, confirmationToken);
 
-        return auditedToolInvoker.invoke(toolName, args, toolContext, () -> {
+        String result = auditedToolInvoker.invoke(toolName, args, toolContext, () -> {
             try {
                 return confirm
-                        ? confirm(action, id, approved, handlerId, remark, confirmationToken, toolContext)
+                        ? confirm(toolName, action, id, approved, handlerId, remark, confirmationToken, toolContext)
                         : preview(action, allowedFrom, id, approved, handlerId, remark, toolContext);
             } catch (WriteRejectedException e) {
-                // 本地拒绝（参数缺失/令牌失效/每轮超限）：转成错误体让模型如实转述
+                // 本地拒绝（参数缺失/令牌失效/每轮超限/权限复核失败）：转成错误体让模型如实转述
                 return errorJson(e.getCode(), e.getMessage());
             } catch (Exception e) {
                 // 传输层异常：写路径绝不自动重试，先让用户查最新状态
@@ -240,6 +254,11 @@ public class WorkOrderWriteTools {
                         : errorJson(500, "无法读取工单，预览未签发令牌：" + e.getMessage());
             }
         }, WorkOrderWriteTools::maskTokenInBody);
+
+        // M5：写操作指标；与审计口径一致（code+message 即 ERROR）
+        String resultStatus = ToolResult.inspectCode(result) == null ? "SUCCESS" : "ERROR";
+        metrics.writeAction(action, confirm ? "confirm" : "preview", resultStatus);
+        return result;
     }
 
     /**
@@ -324,21 +343,29 @@ public class WorkOrderWriteTools {
      * <p>
      * 令牌消费后即作废；即使项目一拒绝，也不能拿同一个令牌重试。
      */
-    private String confirm(String action, Long id, Boolean approved, Long handlerId,
+    private String confirm(String toolName, String action, Long id, Boolean approved, Long handlerId,
                            String remark, String confirmationToken, ToolContext toolContext) throws Exception {
         if (id == null || id <= 0) {
             throw new WriteRejectedException(400, "工单 ID 非法");
         }
 
-        // 步骤 1：令牌校验（会话/用户/动作/工单/参数指纹全部比对）
+        // 步骤 1：跳过缓存重查权限。失败就不消费令牌，用户还能拿同一个令牌重试。
+        // 这里不能只信 60 秒的 perms 缓存：管理员刚收回权限时，写工具可能还「看得见」。
+        UserPerms fresh = permService.loadFresh(tokenOf(toolContext), traceIdOf(toolContext));
+        if (!permissionRegistry.visibleTo(toolName, fresh)) {
+            throw new WriteRejectedException(403,
+                    "权限校验未通过（可能已被收回或权限服务暂不可用），写操作未执行");
+        }
+
+        // 步骤 2：令牌校验（会话/用户/动作/工单/参数指纹全部比对）
         PendingWrite pending = confirmationService.consume(
                 confirmationToken, sessionIdOf(toolContext), userIdOf(toolContext), action, id,
                 paramsOf(handlerId, approved, remark));
 
-        // 步骤 2：每轮真实写次数限流（预览不计）
+        // 步骤 3：每轮真实写次数限流（预览不计）
         writeGuard.checkAndCount(traceIdOf(toolContext));
 
-        // 步骤 3：带预览时观察到的状态去请求项目一，状态漂移会 409 且不写
+        // 步骤 4：带预览时观察到的状态去请求项目一，状态漂移会 409 且不写
         ToolChangeStatusRequest request = new ToolChangeStatusRequest(
                 action, pending.observedFromStatus(), handlerId, approved, normalizeRemark(remark));
         return toolClient.changeStatus(id, request, tokenOf(toolContext));

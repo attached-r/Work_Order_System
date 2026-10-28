@@ -43,8 +43,8 @@ public class AgentSseEvents {
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("traceId", traceId);
         data.put("durationMs", durationMs);
-        return ServerSentEvent.<String>builder(toJson(data))
-                .event("done")
+        return ServerSentEvent.<String>builder(toJson(data)) // 先转Json(String)
+                .event("done") //事件为 done
                 .build();
     }
 

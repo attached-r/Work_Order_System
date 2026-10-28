@@ -1,5 +1,6 @@
 package com.agentworkorder.rag;
 
+import com.agentworkorder.resilience.ResilienceGuard;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
@@ -41,13 +42,16 @@ public class KnowledgeRetriever {
     private final RagProperties properties;
     private final RagManifestStore manifestStore;
     private final ObjectProvider<VectorStore> vectorStoreProvider; // ObjectProvider延迟查找
+    private final ResilienceGuard resilience;
 
     public KnowledgeRetriever(RagProperties properties,
                               RagManifestStore manifestStore,
-                              ObjectProvider<VectorStore> vectorStoreProvider) {
+                              ObjectProvider<VectorStore> vectorStoreProvider,
+                              ResilienceGuard resilience) {
         this.properties = properties;
         this.manifestStore = manifestStore;
         this.vectorStoreProvider = vectorStoreProvider;
+        this.resilience = resilience;
     }
 
     /**
@@ -58,44 +62,47 @@ public class KnowledgeRetriever {
      * @return 成功体 / 空召回体 / 错误体
      */
     public String searchJson(String query, Integer requestedK) {
-        // 步骤 1：空问题直接返回空结果，不打扰向量库
+        // 空问题直接返回空结果，不打扰向量库
         if (!StringUtils.hasText(query)) {
             return emptyJson("检索问题为空");
         }
 
-        // 步骤 2：没有活跃版本说明尚未入库（或 manifest 丢失），明确告知模型
+        // M5：RAG 也走统一熔断。RAG 是增强能力，坏了只影响这一个工具，不能拖垮工单问答。
+        return resilience.call("rag",
+                () -> doSearch(query, requestedK),
+                () -> errorJson(503, "知识库暂不可用（熔断中）"),
+                e -> errorJson(503, "知识库暂不可用：" + rootMessage(e)));
+    }
+
+    /** 真正的检索；异常交给 ResilienceGuard 统一记录/降级。 */
+    private String doSearch(String query, Integer requestedK) {
+        // 没有活跃版本说明尚未入库（或 manifest 丢失），明确告知模型
         RagManifest manifest = manifestStore.get();
         if (manifest == null || !StringUtils.hasText(manifest.activeVersion())) {
             return emptyJson("知识库尚未入库，请先执行 /api/agent/knowledge/reindex");
         }
 
-        try {
-            // 步骤 3：拿到向量库（Milvus Bean 是 @Lazy，Milvus 未启动时这里才抛异常）
-            VectorStore vectorStore = vectorStoreProvider.getObject();
+        // 拿到向量库（Milvus Bean 是 @Lazy，Milvus 未启动时这里才抛异常）
+        VectorStore vectorStore = vectorStoreProvider.getObject();
 
-            // 步骤 4：Top-K 收敛——模型传 100 也只取 maxTopK
-            int topK = clampTopK(requestedK);
+        // Top-K 收敛——模型传 100 也只取 maxTopK
+        int topK = clampTopK(requestedK);
 
-            // 步骤 5：只检索活跃版本，避免重建期间新旧规则混用
-            Filter.Expression activeVersionOnly = new FilterExpressionBuilder()
-                    .eq(KnowledgeMetadata.INDEX_VERSION, manifest.activeVersion())
-                    .build();
+        // 只检索活跃版本，避免重建期间新旧规则混用
+        Filter.Expression activeVersionOnly = new FilterExpressionBuilder()
+                .eq(KnowledgeMetadata.INDEX_VERSION, manifest.activeVersion())
+                .build();
 
-            // 步骤 6：组装检索请求（相似度阈值过滤低相关片段）
-            SearchRequest request = SearchRequest.builder()
-                    .query(query)
-                    .topK(topK)
-                    .similarityThreshold(properties.getSimilarityThreshold())
-                    .filterExpression(activeVersionOnly)
-                    .build();
+        // 组装检索请求（相似度阈值过滤低相关片段）
+        SearchRequest request = SearchRequest.builder()
+                .query(query)
+                .topK(topK)
+                .similarityThreshold(properties.getSimilarityThreshold())
+                .filterExpression(activeVersionOnly)
+                .build();
 
-            List<Document> documents = vectorStore.similaritySearch(request);
-            return successJson(documents);
-        } catch (Exception e) {
-            // 步骤 7：统一降级——检索失败只影响这一个工具结果，对话与工单查询继续可用
-            log.warn("知识检索失败：query={} err={}", query, rootMessage(e));
-            return errorJson("知识库暂不可用：" + rootMessage(e));
-        }
+        List<Document> documents = vectorStore.similaritySearch(request);
+        return successJson(documents);
     }
 
     /** 成功体：逐个片段给出 source/title/section/score/content，并按 maxContentChars 截断。 */
@@ -135,9 +142,9 @@ public class KnowledgeRetriever {
     }
 
     /** 错误体：与项目一 ToolErrorVO 同形状，M2 审计会自动判定为 ERROR。 */
-    private String errorJson(String message) {
+    private String errorJson(int code, String message) {
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("code", 500);
+        body.put("code", code);
         body.put("message", message);
         return toJson(body);
     }

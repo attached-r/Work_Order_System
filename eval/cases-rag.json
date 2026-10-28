@@ -1,0 +1,114 @@
+{
+  "version": 1,
+  "description": "RAG 专项评测集：只测规则类问题，期望调用 searchKnowledge，并检查检索结果里的来源文档。",
+  "cases": [
+    {
+      "id": "rag-01",
+      "category": "rag",
+      "question": "工单被审核驳回后应该怎么处理",
+      "expect_tools": ["searchKnowledge"],
+      "match": "exact",
+      "expect_rag_source_any": ["04-operating-sop.md", "01-work-order-state-machine.md"],
+      "must_contain": ["驳回"]
+    },
+    {
+      "id": "rag-02",
+      "category": "rag",
+      "question": "工单从提交到完成要经过哪些状态",
+      "expect_tools": ["searchKnowledge"],
+      "match": "exact",
+      "expect_rag_source_any": ["01-work-order-state-machine.md"],
+      "must_contain": ["待审核", "待派单"]
+    },
+    {
+      "id": "rag-03",
+      "category": "rag",
+      "question": "哪些角色可以审核工单",
+      "expect_tools": ["searchKnowledge"],
+      "match": "exact",
+      "expect_rag_source_any": ["02-roles-and-permissions.md"],
+      "must_contain": ["审核"]
+    },
+    {
+      "id": "rag-04",
+      "category": "rag",
+      "question": "派单和转派有什么区别",
+      "expect_tools": ["searchKnowledge"],
+      "match": "exact",
+      "expect_rag_source_any": ["01-work-order-state-machine.md", "04-operating-sop.md"],
+      "must_contain": ["派单", "转派"]
+    },
+    {
+      "id": "rag-05",
+      "category": "rag",
+      "question": "工单超时了会怎么样",
+      "expect_tools": ["searchKnowledge"],
+      "match": "exact",
+      "expect_rag_source_any": ["01-work-order-state-machine.md", "05-faq.md"],
+      "must_contain": ["超时"]
+    },
+    {
+      "id": "rag-06",
+      "category": "rag",
+      "question": "验收不通过怎么办",
+      "expect_tools": ["searchKnowledge"],
+      "match": "exact",
+      "expect_rag_source_any": ["01-work-order-state-machine.md", "04-operating-sop.md", "05-faq.md"],
+      "must_contain": ["验收"]
+    },
+    {
+      "id": "rag-07",
+      "category": "rag",
+      "question": "撤回工单需要什么权限",
+      "expect_tools": ["searchKnowledge"],
+      "match": "exact",
+      "expect_rag_source_any": ["02-roles-and-permissions.md"],
+      "must_contain": ["撤回"]
+    },
+    {
+      "id": "rag-08",
+      "category": "rag",
+      "question": "工单有哪几种类型",
+      "expect_tools": ["searchKnowledge"],
+      "match": "exact",
+      "expect_rag_source_any": ["03-work-order-types-and-fields.md"],
+      "must_contain": ["类型"]
+    },
+    {
+      "id": "rag-09",
+      "category": "rag",
+      "question": "为什么看不到某张工单",
+      "expect_tools": ["searchKnowledge"],
+      "match": "exact",
+      "expect_rag_source_any": ["05-faq.md", "02-roles-and-permissions.md"],
+      "must_contain": ["数据范围"]
+    },
+    {
+      "id": "rag-10",
+      "category": "rag",
+      "question": "工单被驳回后还能修改吗",
+      "expect_tools": ["searchKnowledge"],
+      "match": "exact",
+      "expect_rag_source_any": ["01-work-order-state-machine.md", "04-operating-sop.md"],
+      "must_contain": ["修改", "重新提交"]
+    },
+    {
+      "id": "rag-11",
+      "category": "rag",
+      "question": "谁能派单",
+      "expect_tools": ["searchKnowledge"],
+      "match": "exact",
+      "expect_rag_source_any": ["02-roles-and-permissions.md", "05-faq.md"],
+      "must_contain": ["派单"]
+    },
+    {
+      "id": "rag-12",
+      "category": "rag",
+      "question": "处理中能转派吗",
+      "expect_tools": ["searchKnowledge"],
+      "match": "exact",
+      "expect_rag_source_any": ["01-work-order-state-machine.md", "05-faq.md"],
+      "must_contain": ["转派"]
+    }
+  ]
+}

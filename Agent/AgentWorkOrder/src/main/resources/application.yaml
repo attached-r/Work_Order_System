@@ -10,15 +10,13 @@ spring:
     url: jdbc:mysql://localhost:3306/work_order_system
     username: root
     password: ${DB_PASSWORD:20050603RJ}         # 同项目一，用环境变量注入，避免明文入库
-  # Redis：业务代码暂未使用（M5 才接入），这里先按本地环境配好连接参数；
-  # database 用 5，避免与项目一（database 4）的键空间互相污染。
   data:
     redis:
       host: localhost
       port: 6379
       password: ${REDIS_PASSWORD:20050603RJ}
       database: 5
-      timeout: 2000         # 超时改为2s
+      timeout: 2000         # 命令超时：故障时快速降级，不能每条命令等 10s
       connect-timeout: 2000
   ai:
     model:
@@ -36,7 +34,7 @@ spring:
         transcription: none
     openai:
       api-key: ${API_KEY:}
-      # 默认走deepseek的 OpenAI 兼容端点
+      # 默认走 DeepSeek 的 OpenAI 兼容端点；可换成任意兼容服务
       base-url: ${BASE_URL:https://api.deepseek.com}
       chat:
         options:
@@ -49,14 +47,26 @@ agent:
   workorder:
     # 项目一 service-workorder 的地址
     base-url: http://localhost:10001
+    # M5：超时可配置；不能因为项目一挂了把整轮对话挂死
+    connect-timeout-ms: 2000
+    read-timeout-ms: 10000
   audit:
     # 审计写入开关：关掉可短路埋点（压测时用），默认开启
     enabled: true
     # 返回体摘要截断长度（对齐 result_excerpt 列宽 512）
     excerpt-max-length: 512
+    # M5：审计保留期清理（表只增不减，需要一把扫帚）
+    retention-enabled: true
+    retention-days: 90
+    retention-cron: "0 30 3 * * *"
+    retention-batch-size: 1000
+    retention-max-batches: 20
   perm:
-    # 用户 perms 的进程内缓存时长（秒）；改权限后要等它过期才生效，故不宜过长
+    # 用户 perms 缓存时长（秒）；改权限后要等它过期才生效，故不宜过长
     cache-ttl-seconds: 60
+    # M5：memory=进程内（回滚）；redis=Redis（默认，多实例共享）
+    cache-store: redis
+    key-prefix: "agent:perm:"
 
   # M4：写操作
   write:
@@ -70,6 +80,9 @@ agent:
     max-actions-per-turn: 1
     # mock 模式下真正提交所需的关键词（避免「确认」误触发）
     mock-execute-keyword: 确认执行
+    # M5：memory=进程内（回滚、单实例）；redis=Redis（默认，支持多实例）
+    token-store: redis
+    token-key-prefix: "agent:write:pending:"
 
   rag:
     enabled: true
@@ -125,10 +138,29 @@ agent:
     idle-timeout-seconds: 60    # 模型多久没输出就发 error 事件
     max-message-chars: 4000     # 用户消息长度上限
 
+  # M5 熔断配置：项目一 / LLM / RAG 三个下游各自一个熔断器
+  resilience:
+    enabled: true
+    failure-threshold: 5        # 连续失败 5 次后打开
+    open-seconds: 30            # 30 秒后允许一次半开试探
+    half-open-max-calls: 1
+
+# M5：指标 + 健康检查
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,info
+  endpoint:
+    health:
+      show-details: always
+
 # MyBatis-Plus：列名下划线 → 实体 camelCase 自动映射；主键自增
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
+    # 避免慢审计拖住工具调用（不同版本键名若有差异，可在 Mapper 方法上加 @Options(timeout = 3)）
+    default-statement-timeout: 3
   global-config:
     db-config:
       id-type: auto

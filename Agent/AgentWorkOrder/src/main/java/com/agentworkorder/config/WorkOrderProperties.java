@@ -17,4 +17,10 @@ public class WorkOrderProperties {
     /** 项目一基地址；本地默认 {@code http://localhost:10001}。 */
     private String baseUrl = "http://localhost:10001";
 
+    /** 连接超时（毫秒）；项目一挂了不能让工具调用无限等。 */
+    private int connectTimeoutMs = 2000;
+
+    /** 读超时（毫秒）；写操作是本地数据库事务，10 秒足够。 */
+    private int readTimeoutMs = 10000;
+
 }
